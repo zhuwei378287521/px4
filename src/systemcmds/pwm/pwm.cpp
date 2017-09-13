@@ -111,9 +111,13 @@ __EXPORT int	pwm_main(int argc, char *argv[]);
 __END_DECLS
 
 
+/**
+ *
+ */
 static void
 usage(const char *reason)//函数打印命令使用方法
 {
+
 	if (reason != nullptr) {
 		PX4_WARN("%s", reason);
 	}
@@ -242,6 +246,7 @@ get_parameter_value(const char *option, const char *paramDescription)
 
 /**
  * //pwm命令的主函数
+ * input:argc
  */
 int
 pwm_main(int argc, char *argv[])
@@ -262,15 +267,15 @@ pwm_main(int argc, char *argv[])
 	unsigned single_ch = 0;
 	int pwm_value = 0;
 
-	if (argc < 2) {
-		usage(nullptr);
+	if (argc < 2) {//如果参数少于两个
+		usage(nullptr);//打印命令语法
 		return 1;
 	}
 
 	int myoptind = 1;
 	const char *myoptarg = nullptr;
 
-	while ((ch = px4_getopt(argc, argv, "d:vec:g:m:ap:r:", &myoptind, &myoptarg)) != EOF) {
+	while ((ch = px4_getopt(argc, argv, "d:vec:g:m:ap:r:", &myoptind, &myoptarg)) != EOF) {//获取参数
 		switch (ch) {
 
 		case 'd':
