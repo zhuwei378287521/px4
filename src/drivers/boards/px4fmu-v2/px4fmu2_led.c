@@ -60,13 +60,17 @@ extern void led_off(int led);
 extern void led_toggle(int led);
 __END_DECLS
 
+/**
+ * LED灯初始化，对应的灯是FMU B/E指示灯。
+ */
 __EXPORT void led_init()
 {
 	/* Configure LED1 GPIO for output */
 
-	stm32_configgpio(GPIO_LED1);
+	stm32_configgpio(GPIO_LED1);//配置GPIO口，
 }
 
+//点亮灯
 __EXPORT void led_on(int led)
 {
 	if (led == 1) {
@@ -74,7 +78,7 @@ __EXPORT void led_on(int led)
 		stm32_gpiowrite(GPIO_LED1, false);
 	}
 }
-
+//关闭灯
 __EXPORT void led_off(int led)
 {
 	if (led == 1) {
@@ -82,7 +86,7 @@ __EXPORT void led_off(int led)
 		stm32_gpiowrite(GPIO_LED1, true);
 	}
 }
-
+//led灯翻转
 __EXPORT void led_toggle(int led)
 {
 	if (led == 1) {

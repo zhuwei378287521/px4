@@ -45,9 +45,9 @@
 
 /**
  * RGB Led brightness limit
- *
+ *亮度限制
  * Set to 0 to disable, 1 for minimum brightness up to 15 (max)
- *
+ *0为禁用，1最小，15最大
  * @min 0
  * @max 15
  * @group System

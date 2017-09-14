@@ -81,11 +81,16 @@ LED::init()
 {
 	DEVICE_DEBUG("LED::init");
 	CDev::init();
-	led_init();
+	led_init();   //映射到不同板子的LED的初始化详细看/Firmware/src/drivers/boards/px4fmu-v2（**）/px4fmu2_led.c
 
 	return 0;
 }
 
+/**
+ * LED的io口控制
+ * input：filp    cmd操作   arg哪个LED
+ * output：执行结果
+ */
 int
 LED::ioctl(device::file_t *filp, int cmd, unsigned long arg)
 {
@@ -116,6 +121,7 @@ namespace
 LED	*gLED;
 }
 
+//系统加载任务后，会调用这个start函数，创建LED类对象
 void
 drv_led_start(void)
 {

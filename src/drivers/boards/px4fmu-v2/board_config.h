@@ -35,6 +35,7 @@
  * @file board_config.h
  *
  * PX4FMUv2 internal definitions
+ * 管脚映射关系表
  */
 
 #pragma once

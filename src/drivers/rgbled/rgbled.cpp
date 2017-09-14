@@ -68,21 +68,21 @@
 
 #include "uORB/topics/parameter_update.h"
 
-#define RGBLED_ONTIME 120
-#define RGBLED_OFFTIME 120
+#define RGBLED_ONTIME 120   //LED开启时长
+#define RGBLED_OFFTIME 120   //LED关闭时长
 
-#define ADDR			PX4_I2C_OBDEV_LED	/**< I2C adress of TCA62724FMG */
+#define ADDR			PX4_I2C_OBDEV_LED	/**< I2C adress of TCA62724FMG芯片是LED驱动芯片，IIC接口 */
 #define SUB_ADDR_START		0x01	/**< write everything (with auto-increment) */
-#define SUB_ADDR_PWM0		0x81	/**< blue     (without auto-increment) */
-#define SUB_ADDR_PWM1		0x82	/**< green    (without auto-increment) */
-#define SUB_ADDR_PWM2		0x83	/**< red      (without auto-increment) */
-#define SUB_ADDR_SETTINGS	0x84	/**< settings (without auto-increment)*/
+#define SUB_ADDR_PWM0		0x81	/**< blue     (without auto-increment) 查询，写入PWM0地址*/
+#define SUB_ADDR_PWM1		0x82	/**< green    (without auto-increment) 查询，写入PWM1地址*/
+#define SUB_ADDR_PWM2		0x83	/**< red      (without auto-increment) 查询，写入PWM2地址*/
+#define SUB_ADDR_SETTINGS	0x84	/**< settings (without auto-increment)   ICC设备地址，看数据手册可查到*/
 
-#define SETTING_NOT_POWERSAVE	0x01	/**< power-save mode not off */
+#define SETTING_NOT_POWERSAVE	0x01	/**< power-save mode not off 设置省电模式，芯片休眠*/
 #define SETTING_ENABLE   	0x02	/**< on */
 
 
-class RGBLED : public device::I2C
+class RGBLED : public device::I2C   //继承自I2C这个类，定义类GRBLED
 {
 public:
 	RGBLED(int bus, int rgbled);
@@ -94,10 +94,10 @@ public:
 	int		status();
 
 private:
-	work_s			_work;
+	work_s			_work; //工作队列
 
-	float			_brightness;
-	float			_max_brightness;
+	float			_brightness;//亮度
+	float			_max_brightness;//最大亮度
 
 	uint8_t			_r;
 	uint8_t			_g;
@@ -107,7 +107,7 @@ private:
 	bool			_leds_enabled;
 	int			_param_sub;
 
-	LedController		_led_controller;
+	LedController		_led_controller;  //操作LED的驱动数据结构
 
 	static void		led_trampoline(void *arg);
 	void			led();
@@ -157,19 +157,20 @@ RGBLED::~RGBLED()
 	}
 }
 
+//初始化
 int
 RGBLED::init()
 {
 	int ret;
-	ret = I2C::init();
+	ret = I2C::init();//初始化IIC
 
 	if (ret != OK) {
 		return ret;
 	}
 
 	/* switch off LED on start */
-	send_led_enable(false);
-	send_led_rgb();
+	send_led_enable(false);//设置状态，将所有的灯关闭
+	send_led_rgb();//将前面设置的信息，发送出去，所有的设置，最后都要执行这个函数
 
 	update_params();
 
@@ -194,6 +195,7 @@ RGBLED::probe()
 	   we need to do enough operations to be sure we are talking
 	   to the right device. These 3 operations seem to be enough,
 	   as the 3rd one consistently fails if no RGBLED is on the bus.
+	   这可看起来好像很多余，但是是需要的，
 	 */
 
 	unsigned prevretries = _retries;
@@ -366,6 +368,7 @@ RGBLED::send_led_enable(bool enable)
 
 /**
  * Send RGB PWM settings to LED driver according to current color and brightness
+ * 发送设置信息到LED驱动，根据当前的颜色和亮度变量
  */
 int
 RGBLED::send_led_rgb()
@@ -399,13 +402,14 @@ RGBLED::get(bool &on, bool &powersave, uint8_t &r, uint8_t &g, uint8_t &b)
 	return ret;
 }
 
+//更新LED相关参数
 void
 RGBLED::update_params()
 {
 	int32_t maxbrt = 15;
 	param_get(param_find("LED_RGB_MAXBRT"), &maxbrt);
-	maxbrt = maxbrt > 15 ? 15 : maxbrt;
-	maxbrt = maxbrt <  0 ?  0 : maxbrt;
+	maxbrt = maxbrt > 15 ? 15 : maxbrt;//限制最大值
+	maxbrt = maxbrt <  0 ?  0 : maxbrt;//负数，变成最大值
 
 	// A minimum of 2 "on" steps is required for breathe effect
 	if (maxbrt == 1) {
@@ -415,6 +419,7 @@ RGBLED::update_params()
 	_max_brightness = maxbrt / 15.0f;
 }
 
+//这个命令的使用方法
 void
 rgbled_usage()
 {
