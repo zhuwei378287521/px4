@@ -35,6 +35,7 @@
  * @file drv_led.h
  *
  * Led device API to control the external LED(s) via uORB interface
+ * 外部LED设备API，通过uORB接口控制外部LED
  */
 
 #pragma once
@@ -45,6 +46,7 @@
 #include <board_config.h>
 
 // allow the board to override the number (or maxiumum number) of LED's it has
+//定义允许最大LED数量
 #ifndef BOARD_MAX_LEDS
 #define BOARD_MAX_LEDS 4
 #endif
@@ -60,3 +62,5 @@ static const int LED_UORB_QUEUE_LENGTH = BOARD_MAX_LEDS;
 // Legacy paths - 2 are need to allow both pwm and i2c drviers to co-exist
 #define RGBLED0_DEVICE_PATH "/dev/rgbled0"         // Primary RGB LED on i2c
 #define RGBLED_PWM0_DEVICE_PATH "/dev/rgbled_pwm0" // Secondary RGB LED on PWM
+//定义了两种控制方式，主要的RGB led是通过IIC控制，次要的通过PWM控制。
+
