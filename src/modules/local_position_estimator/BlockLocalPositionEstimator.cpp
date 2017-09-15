@@ -206,7 +206,7 @@ void BlockLocalPositionEstimator::update()
 {
 
 	// wait for a sensor update, check for exit condition every 100 ms
-	int ret = px4_poll(_polls, 3, 100);
+	int ret = px4_poll(_polls, 3, 100);//每100ms订阅一次传感器数据，也即是10hz
 
 	if (ret < 0) {
 		return;
@@ -297,6 +297,7 @@ void BlockLocalPositionEstimator::update()
 		}
 	}
 
+	//订阅的数据，获取
 	bool flowUpdated = (_fusion.get() & FUSE_FLOW) && _sub_flow.updated();
 	bool gpsUpdated = (_fusion.get() & FUSE_GPS) && _sub_gps.updated();
 	bool visionUpdated = (_fusion.get() & FUSE_VIS_POS) && _sub_vision_pos.updated();
@@ -306,7 +307,7 @@ void BlockLocalPositionEstimator::update()
 	bool landUpdated = landed()
 			   && ((_timeStamp - _time_last_land) > 1.0e6f / LAND_RATE); // throttle rate
 
-	// get new data
+	// get new data获取新数据，这是一个虚函数，需要实现。
 	updateSubscriptions();
 
 	// update parameters
