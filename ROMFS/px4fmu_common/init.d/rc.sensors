@@ -3,6 +3,7 @@
 # Standard startup script for PX4FMU v2, v3, v4 onboard sensor drivers.
 #
 
+#//比较px4版本，我的是V2版本，所以直接看下面的V2版本
 if ver hwcmp AEROFC_V1
 then
 	# Aero FC uses separate driver
@@ -52,18 +53,23 @@ then
 	mpu9250 -R 2 start
 fi
 
+#//比较px4版本，我的是V2版本，所以直接看V2版本
 if ver hwcmp PX4FMU_V2
 then
 	# External I2C bus
+	#//启动hmc5883 地磁，使用外部的IIC
 	hmc5883 -C -T -X start
 
 	# External I2C bus
+	#//lis3mdl 地磁3轴，使用外部的IIC
 	lis3mdl -X start
 
 	# Internal I2C bus
+	#//启动hmc5883 地磁，使用内部的IIC
 	hmc5883 -C -T -I -R 4 start
 
 	# Internal SPI bus ICM-20608-G
+	#启动内部SPI接口陀螺仪、加速度计
 	mpu6000 -T 20608 start
 
 	# V2 build hwtypecmp is always false
@@ -85,7 +91,7 @@ then
 			fi
 		fi
 	fi
-
+#//我的是V2版本，所以执行else
 	if [ $BOARD_FMUV3 != 0 ]
 	then
 		# sensor heating is available, but we disable it for now
@@ -114,6 +120,7 @@ then
 	else
 		# $BOARD_FMUV3 == 0 -> FMUv2
 
+		#启动mpu6000
 		mpu6000 start
 
 		# As we will use the external mag and the ICM-20608-G
@@ -126,7 +133,9 @@ then
 			mpu9250 start
 		fi
 
+		#陀螺仪
 		l3gd20 start
+		#角速度/地磁
 		lsm303d start
 	fi
 fi
@@ -264,7 +273,7 @@ fi
 
 #
 # Optional drivers
-#
+#启动空速计
 
 sdp3x_airspeed start
 sdp3x_airspeed start -b 2
@@ -328,6 +337,7 @@ then
 fi
 
 # Wait 20 ms for sensors (because we need to wait for the HRT and work queue callbacks to fire)
+#等待20ms再启动传感器,难道sensors是总开关？
 usleep 20000
 if sensors start
 then

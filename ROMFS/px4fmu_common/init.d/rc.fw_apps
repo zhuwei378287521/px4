@@ -1,6 +1,6 @@
 #!nsh
 #
-# Standard apps for fixed wing
+# Standard apps for fixed wing  固定翼姿态位置的估计和控制  
 #
 
 # LPE
