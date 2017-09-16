@@ -36,6 +36,7 @@
  * @author Luis Rodrigues
  *
  * Driver for the TeraRanger One range finders connected via I2C.
+ * 一个测距仪,?是超声波,IIC接口
  */
 
 #include <px4_config.h>
