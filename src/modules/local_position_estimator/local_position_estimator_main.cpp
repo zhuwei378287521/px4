@@ -65,6 +65,8 @@ extern "C" __EXPORT int local_position_estimator_main(int argc, char *argv[]);
 
 /**
  * Mainloop of deamon.
+ * 位置估算---主循环
+ * 使用卡尔曼滤波
  */
 int local_position_estimator_thread_main(int argc, char *argv[]);
 
@@ -79,7 +81,7 @@ usage(const char *reason)
 	if (reason) {
 		fprintf(stderr, "%s\n", reason);
 	}
-
+//可使用参数有{start|stop|status}，可选参数-p <additional params>
 	fprintf(stderr, "usage: local_position_estimator {start|stop|status} [-p <additional params>]\n\n");
 	return 1;
 }
@@ -91,6 +93,7 @@ usage(const char *reason)
  *
  * The actual stack size should be set in the call
  * to task_create().
+ * 这一个应用只能运行在后台工作区，堆栈大小在makefile文件定义，
  */
 int local_position_estimator_main(int argc, char *argv[])
 {
@@ -155,9 +158,9 @@ int local_position_estimator_thread_main(int argc, char *argv[])
 
 	BlockLocalPositionEstimator est;
 
-	thread_running = true;
+	thread_running = true;//置运行标志位true
 
-	while (!thread_should_exit) {
+	while (!thread_should_exit) {//进程没有退出，就一直在这里循环
 		est.update();
 	}
 

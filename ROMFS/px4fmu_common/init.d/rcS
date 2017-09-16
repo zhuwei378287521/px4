@@ -1,5 +1,6 @@
 #!nsh
 # Un comment and use set +e to ignore and set -e to enable 'exit on error control'
+#在错误控制台退出，+e启动  -e失效
 set +e
 # Un comment the line below to help debug scripts by printing a trace of the script commands
 #set -x
@@ -47,6 +48,7 @@ fi
 
 #
 # Default to auto-start mode.
+#默认是自动启动模式，以及一些默认设置在这里，比如日志文件位置。
 #
 set MODE autostart
 
@@ -54,12 +56,13 @@ set TUNE_ERR ML<<CP4CP4CP4CP4CP4
 set LOG_FILE /fs/microsd/bootlog.txt
 
 #
-# Try to mount the microSD card.
+# Try to mount the microSD card.挂载了SD卡
 #
 # REBOOTWORK this needs to start after the flight control loop
 if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
 	echo "[i] microSD mounted: /fs/microsd"
+	#打印挂载了SD卡
 	if hardfault_log check
 	then
 		tone_alarm error
@@ -92,25 +95,30 @@ fi
 #
 # Look for an init script on the microSD card.
 # Disable autostart if the script found.
+#如果在SD卡里面找到初始化脚本，则不使用autostart模式启动。而使用脚本来启动。一般情况下都是找不到这个脚本的。除非用户自己放进去
 #
+#如果脚本文件存在
 set FRC /fs/microsd/etc/rc.txt
 if [ -f $FRC ]
 then
 	echo "INFO  [init] Executing script: ${FRC}"
+	#执行脚本
 	sh $FRC
+	#设置模式为自定义
 	set MODE custom
 fi
 unset FRC
 
+#autostart启动过程
 if [ $MODE == autostart ]
 then
 
 	#
 	# Start the ORB (first app to start)
-	#
+	#启动ORB
 	uorb start
 
-	#
+	#加载参数
 	# Load parameters
 	#
 	set PARAM_FILE /fs/microsd/params
@@ -130,17 +138,19 @@ then
 
 	#
 	# Start system state indicator
-	#
+	#//启动rgbled
 	if rgbled start
 	then
 	else
-		if blinkm start
+	#启动blinkm(闪光)
+		if blinkm start 
 		then
 			blinkm systemstate
 		fi
 	fi
 
 	# FMUv5 may have both PWM I2C RGB LED support
+	#启动外部LED程序
 
 	rgbled_pwm start
 
@@ -151,7 +161,7 @@ then
 
 	#
 	# Set AUTOCNF flag to use it in AUTOSTART scripts
-	#
+	#//设置AUTOCNF标志  
 	if param compare SYS_AUTOCONFIG 1
 	then
 		# Wipe out params except RC* and total flight time
@@ -173,7 +183,7 @@ then
 
 	#
 	# Set default values
-	#
+	#设置默认值
 	set HIL no
 	set VEHICLE_TYPE none
 	set MIXER none
@@ -216,16 +226,19 @@ then
 
 	#
 	# Set USE_IO flag
-	#
+	#//设置USE_IO标志
 	if param compare SYS_USE_IO 1
 	then
-		if ver hwcmp PX4FMU_V4
+		#比较PX4版本
+		if ver hwcmp PX4FMU_V4   
 		then
+		#如果为第四版
 			set USE_IO no
 		fi
 
 		if ver hwcmp PX4FMU_V5
 		then
+		#如果为第5版
 			set USE_IO no
 			set MAVLINK_COMPANION_DEVICE /dev/ttyS3
 		fi
@@ -278,6 +291,7 @@ then
 	then
 		ekf2 start
 	else
+	#执行rc.autostart脚本
 		sh /etc/init.d/rc.autostart
 	fi
 	unset MODE
@@ -327,7 +341,7 @@ then
 
 	#
 	# If autoconfig parameter was set, reset it and save parameters
-	#
+	#//如果AUTOCNF == yes，那么复位并保存参数  
 	if [ $AUTOCNF == yes ]
 	then
 		# Disable safety switch by default on Pixracer
@@ -341,15 +355,17 @@ then
 
 	set IO_PRESENT no
 
+	#我的飞控是V2版本，所以这个条件满足
 	if [ $USE_IO == yes ]
 	then
 		#
 		# Check if PX4IO present and update firmware if needed
-		#
+		#//检查PX4IO芯片是否需要更新固件
 		if [ -f /etc/extras/px4io-v2.bin ]
 		then
 			set IO_FILE /etc/extras/px4io-v2.bin
 
+			#校验CRC
 			if px4io checkcrc ${IO_FILE}
 			then
 				echo "[init] PX4IO CRC OK" >> $LOG_FILE
@@ -358,7 +374,8 @@ then
 			else
 				tone_alarm MLL32CP8MB
 
-				if px4io start
+				#启动PX4IO
+				if px4io start  
 				then
 					# try to safe px4 io so motor outputs dont go crazy
 					if px4io safety_on
@@ -403,6 +420,7 @@ then
 	#
 	if [ $OUTPUT_MODE == none ]
 	then
+	#px4的版本为v2，所以条件满足  
 		if [ $USE_IO == yes ]
 		then
 			set OUTPUT_MODE io
@@ -428,6 +446,7 @@ then
 		set FMU_MODE rcin
 	fi
 
+	#//比较HIL参数设置  
 	if [ $HIL == yes ]
 	then
 		set OUTPUT_MODE hil
@@ -444,7 +463,7 @@ then
 	then
 		set DATAMAN_OPT "-f /fs/mtd_dataman"
 	fi
-	# waypoint storage
+	# waypoint storage//存储路径 
 	# REBOOTWORK this needs to start in parallel
 	if dataman start $DATAMAN_OPT
 	then
@@ -453,11 +472,12 @@ then
 
 	#
 	# Sensors System (start before Commander so Preflight checks are properly run)
-	#
+	#//起飞前传感器检查 
 	if [ $HIL == yes ]
 	then
 		sensors start -h
 	else
+	#V1，v2,V3版本会执行这个脚本来启动传感器
 		sh /etc/init.d/rc.sensors
 	fi
 	unset HIL
@@ -467,6 +487,8 @@ then
 	then
 	    commander start --hil
 	else
+	
+	#//启动commander，类似于任务管理器 
 	    commander start
 	fi
 
@@ -486,7 +508,7 @@ then
 
 	#
 	# Check if UAVCAN is enabled, default to it for ESCs
-	#
+	#检查UAVCAN是否使能 
 	if param greater UAVCAN_ENABLE 2
 	then
 		set OUTPUT_MODE uavcan_esc
@@ -518,6 +540,7 @@ then
 	fi
 
 	# If OUTPUT_MODE == none then something is wrong with setup and we shouldn't try to enable output
+	#如果OUTPUT_MODE == none，那么有问题，不能尝试使能输出  
 	if [ $OUTPUT_MODE != none ]
 	then
 		if [ $OUTPUT_MODE == uavcan_esc ]
@@ -533,6 +556,7 @@ then
 		then
 			if px4io start
 			then
+			#执行RC.IO
 				sh /etc/init.d/rc.io
 			else
 				echo "PX4IO start failed" >> $LOG_FILE
@@ -583,7 +607,7 @@ then
 
 		#
 		# Start IO or FMU for RC PPM input if needed
-		#
+		#/如果需要，则启动IO和FMU接收PPM  
 		if [ $IO_PRESENT == yes ]
 		then
 			if [ $OUTPUT_MODE != io ]
@@ -609,6 +633,7 @@ then
 		fi
 	fi
 
+	#//以下为mavlink的设置
 	if [ $MAVLINK_F == default ]
 	then
 		# Normal mode, use baudrate 57600 (default) and data rate 1000 bytes/s
@@ -771,7 +796,7 @@ then
 
 	#
 	# Logging
-	#
+	#开启日志
 	if param compare SYS_LOGGER 0
 	then
 		# check if we should increase logging rate for ekf2 replay message logging
@@ -816,7 +841,7 @@ then
 
 	#
 	# Fixed wing setup
-	#
+	#固定翼的设置 
 	if [ $VEHICLE_TYPE == fw ]
 	then
 		if [ $MIXER == none ]
@@ -834,17 +859,20 @@ then
 		param set MAV_TYPE ${MAV_TYPE}
 
 		# Load mixer and configure outputs
+		#执行rc.interface，配置控制接口
 		sh /etc/init.d/rc.interface
 
 		# Start standard fixedwing apps
+		#执行rc.fw_apps，开启姿态和位置估算  
 		sh /etc/init.d/rc.fw_apps
 	fi
 
 	#
 	# Multicopters setup
-	#
+	#//多旋翼的设置
 	if [ $VEHICLE_TYPE == mc ]
 	then
+	#//根据用户的选择，设置MAV_TYPE 
 		if [ $MIXER == none ]
 		then
 			echo "Mixer undefined"
@@ -901,15 +929,17 @@ then
 		fi
 
 		# Load mixer and configure outputs
+		#//执行rc.interface，配置控制接口
 		sh /etc/init.d/rc.interface
 
 		# Start standard multicopter apps
+		#// 执行rc.mc_apps，启动姿态位置的估计和控制  
 		sh /etc/init.d/rc.mc_apps
 	fi
 
 	#
 	# VTOL setup
-	#
+	#//工具类型设置  
 	if [ $VEHICLE_TYPE == vtol ]
 	then
 		if [ $MIXER == none ]
@@ -948,6 +978,14 @@ then
 
 		# Start standard vtol apps
 		sh /etc/init.d/rc.vtol_apps
+		#//执行rc.vtol_apps，  
+         #                               //启动attitude_estimator_q start、  
+         #                               //position_estimator_inav start、  
+         #                               //vtol_att_control start、  
+         #                               //mc_att_control start、  
+         #                               //mc_pos_control start、  
+          #                              //fw_att_control start、  
+         #                               //fw_pos_control_l1 start  
 	fi
 
 	#
@@ -1022,18 +1060,19 @@ then
 
 	#
 	# Start the navigator
-	#
+	# Start the navigator//启动导航
 	navigator start
 
 	#
 	# Generic setup (autostart ID not found)
-	#
+	#//常规设置 
 	if [ $VEHICLE_TYPE == none ]
 	then
 		echo "No autostart ID found"
 	fi
 
 	# Start any custom addons
+	#启动自定义插件
 	set FEXTRAS /fs/microsd/etc/extras.txt
 	if [ -f $FEXTRAS ]
 	then
@@ -1053,6 +1092,7 @@ then
 		else
 
 			# Run no SD alarm
+			#//运行没有sd卡的警告 
 			if [ $LOG_FILE == /dev/null ]
 			then
 				# Play SOS

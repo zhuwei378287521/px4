@@ -1,12 +1,20 @@
 #!nsh
 #
-# Standard apps for multirotors:
+# Standard apps for multirotors:  多旋翼姿态位置的估计和控制  
 # att & pos estimator, att & pos control.
 #
 
+#//选择姿态位置估计和控制使用的算法，默认INAV_ENABLED = 1
+
+  
+#姿态估计 Attitude_estimator_q  
+#位置估计 position_estimator_inav  
+#姿态控制 mc_att_control  
+#位置控制 mc_pos_control  
+
 
 #---------------------------------------
-# Estimator group selction
+# Estimator group selction   估计算法组选择（从组里面选择一个）
 #
 # INAV (deprecated)
 if param compare SYS_MC_EST_GROUP 0
@@ -34,15 +42,17 @@ fi
 # EKF
 if param compare SYS_MC_EST_GROUP 2
 then
+#//启动卡尔曼滤波算法
 	ekf2 start
 fi
 #---------------------------------------
 
+#启动姿态控制
 mc_att_control start
-
+#启动位置控制
 mc_pos_control start
 
 #
 # Start Land Detector
-#
+#开启陆地检测？应该不是陆地检测
 land_detector start multicopter
