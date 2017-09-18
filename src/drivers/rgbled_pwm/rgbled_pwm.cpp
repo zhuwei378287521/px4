@@ -35,8 +35,9 @@
  * @file rgbled_pwm.cpp
  *
  * Driver for the onboard RGB LED controller by PWM.
+ * 通过PWM控制的方式控制板载RGB LED
  * this driver is based the PX4 led driver
- *
+ *这个驱动是基于PX4 LED驱动
  */
 
 #include <nuttx/config.h>
@@ -67,8 +68,8 @@
 #include <drivers/device/device.h>
 #include <systemlib/err.h>
 
-#define RGBLED_ONTIME 120
-#define RGBLED_OFFTIME 120
+#define RGBLED_ONTIME 120  //打开时间
+#define RGBLED_OFFTIME 120  //关闭时间
 
 class RGBLED_PWM : public device::CDev
 {
@@ -132,10 +133,11 @@ RGBLED_PWM::~RGBLED_PWM()
 	int counter = 0;
 
 	while (_running && ++counter < 10) {
-		usleep(100000);
+		usleep(100000);//休息100毫秒
 	}
 }
 
+//初始化
 int
 RGBLED_PWM::init()
 {
@@ -144,13 +146,15 @@ RGBLED_PWM::init()
 	led_pwm_servo_init();
 	send_led_rgb();
 
-	_running = true;
+	_running = true;//置运行标志为true，表示可以运行。
 	// kick off work queue
+	//开始工作队列，将led_trampoline加入工作队列
 	work_queue(LPWORK, &_work, (worker_t)&RGBLED_PWM::led_trampoline, this, 0);
 
 	return OK;
 }
 
+//打印LED状态，用于命令中的status参数的输出
 int
 RGBLED_PWM::status()
 {
@@ -158,10 +162,12 @@ RGBLED_PWM::status()
 	bool on, powersave;
 	uint8_t r, g, b;
 
+	//获取RGB值
 	ret = get(on, powersave, r, g, b);
 
 	if (ret == OK) {
 		/* we don't care about power-save mode */
+		//我们并不关系power-save模式
 		DEVICE_LOG("state: %s", on ? "ON" : "OFF");
 		DEVICE_LOG("red: %u, green: %u, blue: %u", (unsigned)r, (unsigned)g, (unsigned)b);
 
@@ -171,15 +177,20 @@ RGBLED_PWM::status()
 
 	return ret;
 }
+/**
+ * 探查LED情况，多余的参数
+ */
 int
 RGBLED_PWM::probe()
 {
 	return (OK);
 }
-
+//启动LED
 void
 RGBLED_PWM::led_trampoline(void *arg)
 {
+	//reinterpret_cast是C++里的强制类型转换符。
+	//将变量强制转换成RGBLED_PWM *类指针
 	RGBLED_PWM *rgbl = reinterpret_cast<RGBLED_PWM *>(arg);
 
 	rgbl->led();
@@ -187,6 +198,7 @@ RGBLED_PWM::led_trampoline(void *arg)
 
 /**
  * Main loop function
+ * 程序主循环
  */
 void
 RGBLED_PWM::led()
@@ -211,43 +223,43 @@ RGBLED_PWM::led()
 
 	if (_led_controller.update(led_control_data) == 1) {
 		switch (led_control_data.leds[0].color) {
-		case led_control_s::COLOR_RED:
+		case led_control_s::COLOR_RED://红色
 			_r = 255; _g = 0; _b = 0;
 			break;
 
-		case led_control_s::COLOR_GREEN:
+		case led_control_s::COLOR_GREEN://绿色
 			_r = 0; _g = 255; _b = 0;
 			break;
 
-		case led_control_s::COLOR_BLUE:
+		case led_control_s::COLOR_BLUE://蓝色
 			_r = 0; _g = 0; _b = 255;
 			break;
 
-		case led_control_s::COLOR_AMBER: //make it the same as yellow
+		case led_control_s::COLOR_AMBER: //make it the same as yellow  琥珀色，和黄色一样
 		case led_control_s::COLOR_YELLOW:
 			_r = 255; _g = 255; _b = 0;
 			break;
 
-		case led_control_s::COLOR_PURPLE:
+		case led_control_s::COLOR_PURPLE://紫色
 			_r = 255; _g = 0; _b = 255;
 			break;
 
-		case led_control_s::COLOR_CYAN:
+		case led_control_s::COLOR_CYAN://灰色
 			_r = 0; _g = 255; _b = 255;
 			break;
 
-		case led_control_s::COLOR_WHITE:
+		case led_control_s::COLOR_WHITE://白色
 			_r = 255; _g = 255; _b = 255;
 			break;
 
-		default: // led_control_s::COLOR_OFF
+		default: // led_control_s::COLOR_OFF //黑色
 			_r = 0; _g = 0; _b = 0;
 			break;
 		}
 
-		_brightness = (float)led_control_data.leds[0].brightness / 255.f;
+		_brightness = (float)led_control_data.leds[0].brightness / 255.f;//计算亮度
 
-		send_led_rgb();
+		send_led_rgb();//将输入发送出去
 	}
 
 	/* re-queue ourselves to run again later */
@@ -257,6 +269,7 @@ RGBLED_PWM::led()
 
 /**
  * Send RGB PWM settings to LED driver according to current color and brightness
+ * 将RGB的PWM设置，发送出去
  */
 int
 RGBLED_PWM::send_led_rgb()
@@ -276,6 +289,10 @@ RGBLED_PWM::send_led_rgb()
 	return (OK);
 }
 
+/**
+ * 获取rgb值
+ * input：on：led是否开启，如果有一个rbg大于0，则led为on。
+ */
 int
 RGBLED_PWM::get(bool &on, bool &powersave, uint8_t &r, uint8_t &g, uint8_t &b)
 {
@@ -287,12 +304,14 @@ RGBLED_PWM::get(bool &on, bool &powersave, uint8_t &r, uint8_t &g, uint8_t &b)
 	return OK;
 }
 
+//命令用法提醒
 static void
 rgbled_usage()
 {
 	PX4_INFO("missing command: try 'start', 'status', 'stop'");
 }
 
+//命令的主程序
 int
 rgbled_pwm_main(int argc, char *argv[])
 {

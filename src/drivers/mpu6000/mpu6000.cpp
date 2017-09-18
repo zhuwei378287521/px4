@@ -2425,6 +2425,7 @@ stop(enum MPU6000_BUS busid)
  * Perform some basic functional tests on the driver;
  * make sure we can collect data from the sensor in polled
  * and automatic modes.
+ * 从uorb中订阅MPU6000传感器数据
  */
 void
 test(enum MPU6000_BUS busid)
