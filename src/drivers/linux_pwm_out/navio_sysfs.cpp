@@ -38,7 +38,7 @@
 #include <px4_log.h>
 
 using namespace linux_pwm_out;
-
+//在创建这个类的时候，需要传入父类，父类的参数，就是pwm管脚的地址。
 NavioSysfsPWMOut::NavioSysfsPWMOut(const char *device, int max_num_outputs)
 	: _device(device)
 {
@@ -118,7 +118,7 @@ int NavioSysfsPWMOut::send_output_pwm(const uint16_t *pwm, int num_outputs)
 	//convert this to duty_cycle in ns
 	for (int i = 0; i < num_outputs; ++i) {
 		int n = ::snprintf(data, sizeof(data), "%u", pwm[i] * 1000);
-		int write_ret = ::write(_pwm_fd[i], data, n);
+		int write_ret = ::write(_pwm_fd[i], data, n);//将pwm值写入pwm设备文件
 
 		if (n != write_ret) {
 			ret = -1;

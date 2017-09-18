@@ -37,6 +37,7 @@
  * Updated on  : Mar 2, 2017
  ****************************************************************************/
 
+//¿ÉÒÔÍ¬¹ıIIC½Ó¿Ú£¬¿ØÖÆÕâ¸öPWMÊä³öĞ¾Æ¬¡£
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -54,23 +55,27 @@
 #include <px4_log.h>
 
 using namespace linux_pwm_out;
-
+//³õÊ¼»¯£¬
+//input£ºbusÊÇÄÄ¸ö×ÜÏß£¬address£ºĞ¾Æ¬µÄÍ¨ĞÅµØÖ·
 int PCA9685::init(int bus, int address)
 {
 	_fd = open_fd(bus, address);
-	reset();
+	reset();//ÖØÖÃĞ¾Æ¬
 
-	usleep(1000 * 100);
-	/* 12BIT ç²¾åº¦è¾“å‡ºä¸‹ï¼Œå¥½èµ¢ç”µè°ƒå¯ä»¥åˆ°200HZåˆ·æ–° */
+	usleep(1000 * 100);//ĞİÃß100ms
+	/* 12BIT ¾«¶ÈÊä³öÏÂ£¬ºÃÓ®µçµ÷¿ÉÒÔµ½200HZË¢ĞÂ */
 	/* 200HZ for 12bit Resolution, supported by most of the esc's */
-	setPWMFreq(200);
-	usleep(1000 * 1000);
+	setPWMFreq(200);//ÉèÖÃpwmÆµÂÊ
+	usleep(1000 * 1000);//ĞİÃß1Ãë
 	return 0;
 }
 
+
+//Êä³öpwm
+//input£ºpwmÊÇ¸÷¸öÍ¨µÀpwmÖµ£¬outputsĞèÒªÊä³öµÄÍ¨µÀ£¬ÊÇÒ»¸öÊıÖµ£¬±ÈÈç16£¬±íÊ¾ÒªÊä³ö´Ó0µ½15µÄÍ¨µÀ
 int PCA9685::send_output_pwm(const uint16_t *pwm, int num_outputs)
 {
-	if (num_outputs > 16) {
+	if (num_outputs > 16) {//Êä³öÖµ
 		num_outputs = 16;
 	}
 
@@ -83,6 +88,7 @@ int PCA9685::send_output_pwm(const uint16_t *pwm, int num_outputs)
 
 PCA9685::PCA9685()
 {
+	//Ê¹ÓÃPCA9685_DEFAULT_I2C_BUSµÄ×ÜÏß
 	init(PCA9685_DEFAULT_I2C_BUS, PCA9685_DEFAULT_I2C_ADDR);
 }
 
@@ -95,7 +101,7 @@ PCA9685::~PCA9685()
 {
 	reset();
 
-	if (_fd >= 0) {
+	if (_fd >= 0) {//Èç¹ûÎÄ¼ş´ò¿ª£¬Ôò¹Ø±ÕÎÄ¼ş
 		close(_fd);
 	}
 }
@@ -107,7 +113,7 @@ void PCA9685::reset()
 		write_byte(_fd, MODE2, 0x04); //Normal mode
 	}
 }
-
+//ÉèÖÃÆµÂÊ
 void PCA9685::setPWMFreq(int freq)
 {
 	if (_fd != -1) {
@@ -144,7 +150,7 @@ void PCA9685::setPWM(uint8_t led, int on_value, int off_value)
 	}
 
 }
-
+//¶ÁÈ¡¼Ä´æÆ÷Öµ
 uint8_t PCA9685::read_byte(int fd, uint8_t address)
 {
 
@@ -161,7 +167,7 @@ uint8_t PCA9685::read_byte(int fd, uint8_t address)
 
 	return buf[0];
 }
-
+//Ğ´¼Ä´æÆ÷Öµ
 void PCA9685::write_byte(int fd, uint8_t address, uint8_t data)
 {
 	uint8_t buf[2];

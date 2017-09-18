@@ -57,6 +57,8 @@
 #include "PCA9685.h"
 #include "ocpoc_mmap.h"
 
+
+//这个是驱动上层的pwm输出，是用来给linux直接调用的，在linux_pwm_out目录中，其他的文件，都是基本的硬件驱动，但是没有业务逻辑，这个文件加入业务逻辑，可以单独运行。
 namespace linux_pwm_out
 {
 static px4_task_t _task_handle = -1;
@@ -65,8 +67,8 @@ static bool _is_running = false;
 
 static char _device[64] = "/sys/class/pwm/pwmchip0";
 static char _protocol[64] = "navio";
-static int _max_num_outputs = 8; ///< maximum number of outputs the driver should use
-static char _mixer_filename[64] = "ROMFS/px4fmu_common/mixers/quad_x.main.mix";
+static int _max_num_outputs = 8; ///< maximum number of outputs the driver should use  最大输出数量为8，也就是最大支持8轴输出
+static char _mixer_filename[64] = "ROMFS/px4fmu_common/mixers/quad_x.main.mix";//混合器的文件地址，
 
 // subscriptions
 int     _controls_subs[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
@@ -111,8 +113,9 @@ void subscribe();
 
 void task_main(int argc, char *argv[]);
 
-/* mixer initialization */
+/* mixer initialization /混合器初始化*/
 int initialize_mixer(const char *mixer_filename);
+//回调
 int mixer_control_callback(uintptr_t handle, uint8_t control_group, uint8_t control_index, float &input);
 
 
@@ -191,10 +194,10 @@ void subscribe()
 
 	}
 }
-
+//pixhawk程序运行循环函数，是一个线程
 void task_main(int argc, char *argv[])
 {
-	_is_running = true;
+	_is_running = true;//设置运行状态为true。
 
 	// Set up mixer
 	if (initialize_mixer(_mixer_filename) < 0) {
@@ -204,6 +207,7 @@ void task_main(int argc, char *argv[])
 
 	PWMOutBase *pwm_out;
 
+	//各种PWM输出的方式，PCA9685是16路12位pwm信号发生器，pixhawk硬件没有这个芯片
 	if (strcmp(_protocol, "pca9685") == 0) {
 		PX4_INFO("Starting PWM output in PCA9685 mode");
 		pwm_out = new PCA9685();
@@ -212,7 +216,7 @@ void task_main(int argc, char *argv[])
 		PX4_INFO("Starting PWM output in ocpoc_mmap mode");
 		pwm_out = new OcpocMmapPWMOut(_max_num_outputs);
 
-	} else { /* navio */
+	} else { /* navio *///pixhawk默认是这个，使用stm32上面的引脚，输出PWM信号
 		PX4_INFO("Starting PWM output in Navio mode");
 		pwm_out = new NavioSysfsPWMOut(_device, _max_num_outputs);
 	}
@@ -446,7 +450,7 @@ void usage()
 
 } // namespace linux_pwm_out
 
-/* driver 'main' command */
+/* driver 'main' command 命令的执行主程序*/
 extern "C" __EXPORT int linux_pwm_out_main(int argc, char *argv[]);
 
 int linux_pwm_out_main(int argc, char *argv[])

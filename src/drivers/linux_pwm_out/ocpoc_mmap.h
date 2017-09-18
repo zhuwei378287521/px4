@@ -41,6 +41,7 @@ namespace linux_pwm_out
 /**
  ** class OcpocMmapPWMOut
  * PWM output class for Aerotenna OcPoC via mmap
+ * 这是一个微波雷达用的程序，
  */
 class OcpocMmapPWMOut : public PWMOutBase
 {
@@ -59,7 +60,7 @@ private:
 
 	// Period|Hi 32 bits each
 	struct s_period_hi {
-		uint32_t period;
+		uint32_t period;//分频
 		uint32_t hi;
 	};
 

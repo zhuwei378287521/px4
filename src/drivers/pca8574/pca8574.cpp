@@ -70,6 +70,7 @@
 #define PCA8574_DEVICE_PATH "/dev/pca8574"
 
 #define ADDR			0x20	///< I2C adress of PCA8574 (default, A0-A2 pulled to GND)
+//8位io拓展芯片，使用iic接口。
 
 class PCA8574 : public device::I2C
 {

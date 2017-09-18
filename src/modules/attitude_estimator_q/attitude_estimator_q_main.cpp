@@ -279,6 +279,10 @@ void AttitudeEstimatorQ::task_main_trampoline(int argc, char *argv[])
 	attitude_estimator_q::instance->task_main();
 }
 
+/**
+ * 姿态解算的算法，在这个函数开始。
+ *
+ */
 void AttitudeEstimatorQ::task_main()
 {
 
@@ -288,6 +292,7 @@ void AttitudeEstimatorQ::task_main()
 	perf_counter_t _perf_mag(perf_alloc_once(PC_ELAPSED, "sim_mag_delay"));
 #endif
 
+	//sensor_combined是传感器的信息ID，是uORB工作的唯一ID
 	_sensors_sub = orb_subscribe(ORB_ID(sensor_combined));
 
 	_vision_sub = orb_subscribe(ORB_ID(vehicle_vision_attitude));
@@ -306,12 +311,12 @@ void AttitudeEstimatorQ::task_main()
 	fds[0].fd = _sensors_sub;
 	fds[0].events = POLLIN;
 
-	while (!_task_should_exit) {
-		int ret = px4_poll(fds, 1, 1000);
+	while (!_task_should_exit) {//任务会在这里一直循环。
+		int ret = px4_poll(fds, 1, 1000);  //配置阻塞时间，1ms读取一次sensor_combined的数据。
 
-		if (ret < 0) {
+		if (ret < 0) {//获取数据失败
 			// Poll error, sleep and try again
-			usleep(10000);
+			usleep(10000);//暂停10ms
 			PX4_WARN("Q POLL ERROR");
 			continue;
 
@@ -325,7 +330,7 @@ void AttitudeEstimatorQ::task_main()
 
 		// Update sensors
 		sensor_combined_s sensors;
-
+//orb_copy如果有数据了，需要通过copy函数来复制到我们的容器(变量）
 		if (!orb_copy(ORB_ID(sensor_combined), _sensors_sub, &sensors)) {
 			// Feed validator with recent sensor data
 
