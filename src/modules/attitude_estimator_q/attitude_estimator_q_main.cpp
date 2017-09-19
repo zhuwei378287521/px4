@@ -74,6 +74,7 @@
 #include <systemlib/mavlink_log.h>
 
 extern "C" __EXPORT int attitude_estimator_q_main(int argc, char *argv[]);
+//这是因为c++有重载，但是c没有，所以c代码需要作出声明，好进行链接。
 
 using math::Vector;
 using math::Matrix;
@@ -255,11 +256,12 @@ int AttitudeEstimatorQ::start()
 	ASSERT(_control_task == -1);
 
 	/* start the task */
+	//创建任务
 	_control_task = px4_task_spawn_cmd("attitude_estimator_q",
-					   SCHED_DEFAULT,
-					   SCHED_PRIORITY_MAX - 5,
-					   2000,
-					   (px4_main_t)&AttitudeEstimatorQ::task_main_trampoline,
+					   SCHED_DEFAULT,//默认调度
+					   SCHED_PRIORITY_MAX - 5,//优先级
+					   2000,//栈大小
+					   (px4_main_t)&AttitudeEstimatorQ::task_main_trampoline,//入口函数
 					   nullptr);
 
 	if (_control_task < 0) {
@@ -274,6 +276,7 @@ void AttitudeEstimatorQ::print()
 {
 }
 
+//姿态解算的主函数，通过调用这个函数，启动姿态解算
 void AttitudeEstimatorQ::task_main_trampoline(int argc, char *argv[])
 {
 	attitude_estimator_q::instance->task_main();
@@ -303,17 +306,17 @@ void AttitudeEstimatorQ::task_main()
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
 
-	update_parameters(true);
+	update_parameters(true);//参数自己跟踪进去看看
 
 	hrt_abstime last_time = 0;
 
 	px4_pollfd_struct_t fds[1] = {};
-	fds[0].fd = _sensors_sub;
+	fds[0].fd = _sensors_sub;//阻塞等待那个主题数据，为什么是它
 	fds[0].events = POLLIN;
 
 	while (!_task_should_exit) {//任务会在这里一直循环。
 		int ret = px4_poll(fds, 1, 1000);  //配置阻塞时间，1ms读取一次sensor_combined的数据。
-
+		//以1000ms去轮训
 		if (ret < 0) {//获取数据失败
 			// Poll error, sleep and try again
 			usleep(10000);//暂停10ms
@@ -326,14 +329,17 @@ void AttitudeEstimatorQ::task_main()
 			continue;
 		}
 
-		update_parameters(false);
+		update_parameters(false);//关闭自动更新参数
 
-		// Update sensors
+		// Update sensors下面开始更新传感器参数了
 		sensor_combined_s sensors;
+		//先有个印象 sensors下面都会用到 是一个很大的结构体 里面放的都是传感器相关的数据
+
+		//orb_copy开始，对数据做处理 选最优
 //orb_copy如果有数据了，需要通过copy函数来复制到我们的容器(变量）
 		if (!orb_copy(ORB_ID(sensor_combined), _sensors_sub, &sensors)) {
 			// Feed validator with recent sensor data
-
+//这里的写法，和上一版本是有改动的。
 			if (sensors.timestamp > 0) {
 				// Filter gyro signal since it is not fildered in the drivers.
 				_gyro(0) = _lp_gyro_x.apply(sensors.gyro_rad[0]);
@@ -348,7 +354,7 @@ void AttitudeEstimatorQ::task_main()
 				_accel(2) = _lp_accel_z.apply(sensors.accelerometer_m_s2[2]);
 
 				if (_accel.length() < 0.01f) {
-					PX4_DEBUG("WARNING: degenerate accel!");
+					PX4_DEBUG("WARNING: degenerate accel!");//degenerate 恶化 变质 就是数据有问题 可能硬件有问题
 					continue;
 				}
 			}
@@ -359,7 +365,7 @@ void AttitudeEstimatorQ::task_main()
 				_mag(2) = sensors.magnetometer_ga[2];
 
 				if (_mag.length() < 0.01f) {
-					PX4_DEBUG("WARNING: degenerate mag!");
+					PX4_DEBUG("WARNING: degenerate mag!");//degenerate 恶化 变质 就是数据有问题 可能硬件有问题
 					continue;
 				}
 			}
@@ -374,7 +380,8 @@ void AttitudeEstimatorQ::task_main()
 		bool mocap_updated = false;
 		orb_check(_mocap_sub, &mocap_updated);
 
-		if (vision_updated) {
+		if (vision_updated) {//如果视觉更新  拷出视觉信息 ，视觉也是一个结构体里面有很多信息 包括想x,y,x,vx,vy,vz,q[4] 就是根据视觉也可以获取位置信息
+			  //下面就是根据视觉 来更新姿态
 			orb_copy(ORB_ID(vehicle_vision_attitude), _vision_sub, &_vision);
 			math::Quaternion q(_vision.q);
 
@@ -390,7 +397,7 @@ void AttitudeEstimatorQ::task_main()
 		if (mocap_updated) {
 			orb_copy(ORB_ID(att_pos_mocap), _mocap_sub, &_mocap);
 			math::Quaternion q(_mocap.q);
-			math::Matrix<3, 3> Rmoc = q.to_dcm();
+			math::Matrix<3, 3> Rmoc = q.to_dcm();//R-mocap 基于动作捕捉 得到的转换矩阵
 
 			math::Vector<3> v(1.0f, 0.0f, 0.4f);
 
@@ -416,27 +423,29 @@ void AttitudeEstimatorQ::task_main()
 			_ext_hdg_good = _mocap.timestamp > 0 && (hrt_elapsed_time(&_mocap.timestamp) < 500000);
 		}
 
-		bool gpos_updated;
+		bool gpos_updated;//global position 全球位置
 		orb_check(_global_pos_sub, &gpos_updated);
 
-		if (gpos_updated) {
+		if (gpos_updated) {//如果位置已经更新 就取出位置数据
 			orb_copy(ORB_ID(vehicle_global_position), _global_pos_sub, &_gpos);
 
 			if (_mag_decl_auto && _gpos.eph < 20.0f && hrt_elapsed_time(&_gpos.timestamp) < 1000000) {
 				/* set magnetic declination automatically */
+				/* set magnetic declination automatically 自动获取磁偏角 因为不同重力 不同位置磁偏角不同 根据经度和维度 自动获取磁偏角*/
 				update_mag_declination(math::radians(get_mag_declination(_gpos.lat, _gpos.lon)));
 			}
 		}
 
 		if (_acc_comp && _gpos.timestamp != 0 && hrt_absolute_time() < _gpos.timestamp + 20000 && _gpos.eph < 5.0f && _inited) {
 			/* position data is actual */
+			 /* 实际的位置数据 在 北 东 地 坐标系下 position data is actual */
 			if (gpos_updated) {
 				Vector<3> vel(_gpos.vel_n, _gpos.vel_e, _gpos.vel_d);
 
 				/* velocity updated */
 				if (_vel_prev_t != 0 && _gpos.timestamp != _vel_prev_t) {
 					float vel_dt = (_gpos.timestamp - _vel_prev_t) / 1000000.0f;
-					/* calculate acceleration in body frame */
+					/*计算载体坐标系上的加速度 calculate acceleration in body frame */
 					_pos_acc = _q.conjugate_inversed((vel - _vel_prev) / vel_dt);
 				}
 
@@ -459,7 +468,8 @@ void AttitudeEstimatorQ::task_main()
 		if (dt > _dt_max) {
 			dt = _dt_max;
 		}
-
+		 /*！！ update 就是姿态更新的函数，先利用视觉 mcap 加速度 磁力计 修正陀螺仪，
+		  * 再利用四元数的微分方程 实时更新解算姿态信息， 此函数后就是得到更新后的姿态信息了  */
 		if (!update(dt)) {
 			continue;
 		}
