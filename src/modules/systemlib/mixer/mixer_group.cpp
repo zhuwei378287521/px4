@@ -196,6 +196,7 @@ MixerGroup::groups_required(uint32_t &groups)
 	}
 }
 
+//mixer_load.c代码中会加载好文件，并放入buf中，然后这个函数可以加载这个buf里面的参数，并解析
 int
 MixerGroup::load_from_buf(const char *buf, unsigned &buflen)
 {
@@ -213,6 +214,7 @@ MixerGroup::load_from_buf(const char *buf, unsigned &buflen)
 
 		/*
 		 * Use the next character as a hint to decide which mixer class to construct.
+		 * 解析的数据，每一行的首字母，根据首字母来确定类别
 		 */
 		switch (*p) {
 		case 'Z':
@@ -223,7 +225,7 @@ MixerGroup::load_from_buf(const char *buf, unsigned &buflen)
 			m = SimpleMixer::from_text(_control_cb, _cb_handle, p, resid);
 			break;
 
-		case 'R':
+		case 'R'://多旋翼mixer
 			m = MultirotorMixer::from_text(_control_cb, _cb_handle, p, resid);
 			break;
 

@@ -33,7 +33,7 @@
 
 /**
  * @file mixer_multirotor.cpp
- *
+ *多旋翼混合器
  * Multi-rotor mixers.
  */
 #include <px4_config.h>
@@ -98,6 +98,7 @@ MultirotorMixer::~MultirotorMixer()
 	}
 }
 
+//从文本中获取参数信息，并创建MultirotorMixer对象
 MultirotorMixer *
 MultirotorMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, const char *buf, unsigned &buflen)
 {
@@ -111,11 +112,13 @@ MultirotorMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handl
 		return nullptr;
 	}
 
+	//解析失败，获取机架类型，比例，偏移，上下油门值
 	if (sscanf(buf, "R: %7s %d %d %d %d%n", geomname, &s[0], &s[1], &s[2], &s[3], &used) != 5) {
 		debug("multirotor parse failed on '%s'", buf);
 		return nullptr;
 	}
 
+	//溢出
 	if (used > (int)buflen) {
 		debug("OVERFLOW: multirotor spec used %d of %u", used, buflen);
 		return nullptr;
@@ -208,20 +211,33 @@ MultirotorMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handl
 		       s[3] / 10000.0f);
 }
 
+//这个硬是混控的业务逻辑函数，
+//input：outputs计算后的结果保存在这里，space  ，status_reg
 unsigned
 MultirotorMixer::mix(float *outputs, unsigned space, uint16_t *status_reg)
 {
 	/* Summary of mixing strategy:
 	1) mix roll, pitch and thrust without yaw.
+	混控包括roll，pitch和油门，没有yaw
 	2) if some outputs violate range [0,1] then try to shift all outputs to minimize violation ->
 		increase or decrease total thrust (boost). The total increase or decrease of thrust is limited
 		(max_thrust_diff). If after the shift some outputs still violate the bounds then scale roll & pitch.
 		In case there is violation at the lower and upper bound then try to shift such that violation is equal
 		on both sides.
+
+如果某些输出违反了范围[0,1]，那么试着将所有输出转移到最小化冲突- >
+增加或减少总推力(提高)。推力的总增加或减少是有限的
+(max_thrust_diff)。如果在移位之后，一些输出仍然违反了边界，那么刻度滚。
+如果在下界和上界有违规行为，那么就试着将这种违规行为转变为相等的
+两边。
+
 	3) mix in yaw and scale if it leads to limit violation.
+	如果它导致了限制违规。就可以使用混合yaw和比例
 	4) scale all outputs to range [idle_speed,1]
+	所有的比例输出范围[idle_speed,1]
 	*/
 
+	//将roll，pitch，yaw，thrust限制在-1到1之间
 	float		roll    = math::constrain(get_control(0, 0) * _roll_scale, -1.0f, 1.0f);
 	float		pitch   = math::constrain(get_control(0, 1) * _pitch_scale, -1.0f, 1.0f);
 	float		yaw     = math::constrain(get_control(0, 2) * _yaw_scale, -1.0f, 1.0f);
@@ -229,20 +245,21 @@ MultirotorMixer::mix(float *outputs, unsigned space, uint16_t *status_reg)
 	float		min_out = 1.0f;
 	float		max_out = 0.0f;
 
-	// clean out class variable used to capture saturation
+	// clean out class variable used to capture saturation饱和
 	_saturation_status.value = 0;
 
-	// thrust boost parameters
+	// thrust boost parameters油门增加和减小步进？
 	float thrust_increase_factor = 1.5f;
 	float thrust_decrease_factor = 0.6f;
 
-	/* perform initial mix pass yielding unbounded outputs, ignore yaw */
+	/* perform initial mix pass yielding unbounded outputs, ignore yaw ，
+	 * 混合思路：roll*roll比例+pitch*pitch比例。忽略yaw*/
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		float out = roll * _rotors[i].roll_scale +
 			    pitch * _rotors[i].pitch_scale +
 			    thrust;
 
-		out *= _rotors[i].out_scale;
+		out *= _rotors[i].out_scale;//乘以输出比例
 
 		/* calculate min and max output values */
 		if (out < min_out) {
@@ -253,9 +270,9 @@ MultirotorMixer::mix(float *outputs, unsigned space, uint16_t *status_reg)
 			max_out = out;
 		}
 
-		outputs[i] = out;
+		outputs[i] = out;//将输出值保存到outputs
 	}
-
+//油门的计算
 	float boost = 0.0f;		// value added to demanded thrust (can also be negative)
 	float roll_pitch_scale = 1.0f;	// scale for demanded roll and pitch
 
@@ -299,23 +316,25 @@ MultirotorMixer::mix(float *outputs, unsigned space, uint16_t *status_reg)
 
 	// capture saturation
 	if (min_out < 0.0f) {
-		_saturation_status.flags.motor_neg = true;
+		_saturation_status.flags.motor_neg = true;//马达负为true
 	}
 
 	if (max_out > 1.0f) {
-		_saturation_status.flags.motor_pos = true;
+		_saturation_status.flags.motor_pos = true;//马达正为true
 	}
 
 	// Thrust reduction is used to reduce the collective thrust if we hit
 	// the upper throttle limit
 	float thrust_reduction = 0.0f;
 
+
+	//再混合，但是现在有推力推进，比例滚/俯仰和增加偏航
 	// mix again but now with thrust boost, scale roll/pitch and also add yaw
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		float out = (roll * _rotors[i].roll_scale +
 			     pitch * _rotors[i].pitch_scale) * roll_pitch_scale +
 			    yaw * _rotors[i].yaw_scale +
-			    thrust + boost;
+			    thrust + boost;   //将所有的参数加在一起
 
 		out *= _rotors[i].out_scale;
 
@@ -470,8 +489,10 @@ MultirotorMixer::update_saturation_status(unsigned index, bool clipping_high, bo
 
 	// The motor is saturated at the lower limit
 	// check which control axes and which directions are contributing
+	// 	   检查哪个控制轴和哪个方向是有贡献的
 	if (clipping_low) {
 		// check if the roll input is saturating
+		//检查滚动输入是否饱和
 		if (_rotors[index].roll_scale > 0.0f) {
 			// A negative change in roll will increase saturation
 			_saturation_status.flags.roll_neg = true;

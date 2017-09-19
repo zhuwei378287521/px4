@@ -33,7 +33,7 @@
 
 /**
  * @file mixer_simple.cpp
- *
+ *简单混合器，多个输入量，最后一个输出量的，多用固定翼或小车
  * Simple summing mixer.
  */
 
@@ -78,6 +78,7 @@ unsigned SimpleMixer::set_trim(float trim)
 	return 1;
 }
 
+//解析mixer中的输出量
 int
 SimpleMixer::parse_output_scaler(const char *buf, unsigned &buflen, mixer_scaler_s &scaler)
 {
@@ -85,15 +86,15 @@ SimpleMixer::parse_output_scaler(const char *buf, unsigned &buflen, mixer_scaler
 	int s[5];
 	int n = -1;
 
-	buf = findtag(buf, buflen, 'O');
+	buf = findtag(buf, buflen, 'O');//寻找"O:"这样的控制符,返回指针指向输出格式域定义的首字符'O'
 
 	if ((buf == nullptr) || (buflen < 12)) {
 		debug("output parser failed finding tag, ret: '%s'", buf);
 		return -1;
-	}
+	}//12,表示O:这行的定义至少有12个字符(O:和五个1位长的整数),例如最短的定义为: O: 0 0 0 0 0
 
 	if ((ret = sscanf(buf, "O: %d %d %d %d %d %n",
-			  &s[0], &s[1], &s[2], &s[3], &s[4], &n)) != 5) {
+			  &s[0], &s[1], &s[2], &s[3], &s[4], &n)) != 5) {//O:后面必须有5个整数,且整数间用至少一个空格分开,此处是取出O:后面的5个整数值.
 		debug("out scaler parse failed on '%s' (got %d, consumed %d)", buf, ret, n);
 		return -1;
 	}
@@ -104,6 +105,10 @@ SimpleMixer::parse_output_scaler(const char *buf, unsigned &buflen, mixer_scaler
 		debug("no line ending, line is incomplete");
 		return -1;
 	}
+	//从下面的赋值操作可以得出 O:后面5个数值的字义.,分别为 [negative_scale] [positive_scale] [offset] [min_output] [max_output]
+	//并且每个这都做了除10000的操作,所以MIX格式定义中说这些值都是被放大10000倍后的数值.
+
+
 
 	scaler.negative_scale	= s[0] / 10000.0f;
 	scaler.positive_scale	= s[1] / 10000.0f;
@@ -114,6 +119,7 @@ SimpleMixer::parse_output_scaler(const char *buf, unsigned &buflen, mixer_scaler
 	return 0;
 }
 
+//解析mixer中的输入量
 int
 SimpleMixer::parse_control_scaler(const char *buf, unsigned &buflen, mixer_scaler_s &scaler, uint8_t &control_group,
 				  uint8_t &control_index)
@@ -121,13 +127,14 @@ SimpleMixer::parse_control_scaler(const char *buf, unsigned &buflen, mixer_scale
 	unsigned u[2];
 	int s[5];
 
-	buf = findtag(buf, buflen, 'S');
+	buf = findtag(buf, buflen, 'S');//找到剩余缓冲区中的第一个'S',并让buf指向该行的行首;
 
+	//16表示该S:行至少有16个字符,即至少有7个整数(因为整数间至少有1个空格分隔)
 	if ((buf == nullptr) || (buflen < 16)) {
 		debug("control parser failed finding tag, ret: '%s'", buf);
 		return -1;
 	}
-
+	//读取S:后面的7个整数.
 	if (sscanf(buf, "S: %u %u %d %d %d %d %d",
 		   &u[0], &u[1], &s[0], &s[1], &s[2], &s[3], &s[4]) != 7) {
 		debug("control parse failed on '%s'", buf);
@@ -140,6 +147,11 @@ SimpleMixer::parse_control_scaler(const char *buf, unsigned &buflen, mixer_scale
 		debug("no line ending, line is incomplete");
 		return -1;
 	}
+	//从下面的赋值可以看出MIXER文件S:定义的格式,S:后面的整数分别为
+	// [control_group] [ontrol_index] [negative_scale] [positive_scale] [offset] [min_output] [max_output]
+
+	// 可以看出,输入信号的定义比输入出信号的定义多了两个整数,用来表示当前输入信号所在的组和组内的序号. 第1和第2个整就是用来
+	// 说明组号和组内序号.而后面5个整数的定义和输入信号的定义一样,且也要除以10000.
 
 	control_group		= u[0];
 	control_index		= u[1];
@@ -152,6 +164,10 @@ SimpleMixer::parse_control_scaler(const char *buf, unsigned &buflen, mixer_scale
 	return 0;
 }
 
+/**
+ * //解析mixer文件中的具体数字，不同的mixer文件，有不同的from_text数据。
+ *
+ */
 SimpleMixer *
 SimpleMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, const char *buf, unsigned &buflen)
 {
@@ -172,7 +188,7 @@ SimpleMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, c
 		goto out;
 	}
 
-	buf = skipline(buf, buflen);
+	buf = skipline(buf, buflen);//让buf指定下一行
 
 	if (buf == nullptr) {
 		debug("no line ending, line is incomplete");
@@ -180,19 +196,24 @@ SimpleMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, c
 	}
 
 	mixinfo = (mixer_simple_s *)malloc(MIXER_SIMPLE_SIZE(inputs));
+	//M:后面的数字为struct mixer_control_s 结构的数量.MIXER_SIMPLE_SIZE的字义为sizeof(mixer_simple_s) + inputs*sizeof(mixer_control_s),
+	//即一个完整的mixer_simple_s的定义,controls[0]一共有inputs个.
+
 
 	if (mixinfo == nullptr) {
 		debug("could not allocate memory for mixer info");
 		goto out;
 	}
 
-	mixinfo->control_count = inputs;
+	mixinfo->control_count = inputs;//input 信号的数量
 
+	//解析输出量，输出量只可能有一个，所以直接if
 	if (parse_output_scaler(end - buflen, buflen, mixinfo->output_scaler)) {
 		debug("simple mixer parser failed parsing out scaler tag, ret: '%s'", buf);
 		goto out;
 	}
 
+	//解析输入量，因为输入有多个，所以要循环多次
 	for (unsigned i = 0; i < inputs; i++) {
 		if (parse_control_scaler(end - buflen, buflen,
 					 mixinfo->controls[i].scaler,
@@ -200,10 +221,11 @@ SimpleMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, c
 					 mixinfo->controls[i].control_index)) {
 			debug("simple mixer parser failed parsing ctrl scaler tag, ret: '%s'", buf);
 			goto out;
-		}
+		}//该函数解析输出域,并将期填充到mixinfo的output_scaler字段中
 
 	}
 
+	//解析完之后，创建这个对象，实参都是上面解析完数据，
 	sm = new SimpleMixer(control_cb, cb_handle, mixinfo);
 
 	if (sm != nullptr) {

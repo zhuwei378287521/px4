@@ -1093,7 +1093,7 @@ UavcanNode::ioctl(file *filp, int cmd, unsigned long arg)
 
 			} else {
 
-				ret = _mixers->load_from_buf(buf, buflen);
+				ret = _mixers->load_from_buf(buf, buflen);//这里开始解析数据
 
 				if (ret != 0) {
 					warnx("mixer load failed with %d", ret);

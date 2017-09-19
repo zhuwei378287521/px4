@@ -33,7 +33,7 @@
 
 /**
  * @file mixer_helicopter.cpp
- *
+ *直升飞机的混合器
  * Helicopter mixers.
  */
 #include <px4_config.h>

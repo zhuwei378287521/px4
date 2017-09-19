@@ -13,4 +13,9 @@ Multirotor mixer for Parrot Bebop
 This file defines a single mixer for a quadrotor in the x configuration. All controls
 are mixed 100%.
 
+这个文件定义了在x配置中一个四转子的单个混频器。所有控件
+
+混合100%。
+
+
 R: 4x 10000 10000 -10000 0

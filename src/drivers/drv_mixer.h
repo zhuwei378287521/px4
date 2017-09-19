@@ -73,26 +73,27 @@
 
 /** simple channel scaler */
 struct mixer_scaler_s {
-	float			negative_scale;
-	float			positive_scale;
-	float			offset;
-	float			min_output;
-	float			max_output;
-};
+	float			negative_scale;;//负向缩放, MIX文件中 O: 后面的第1个整数/10000.0f
+	float			positive_scale;//正向缩放, MIX文件中 O: 后面的第2个整数/10000.0f
+	float			offset; //偏移 , MIX文件中 O: 后面的第3个整数/10000.0f
+	float			min_output;//最小输出值 , MIX文件中 O: 后面的第4个整数/10000.0f
+	float			max_output;//最大输出值 , MIX文件中 O: 后面的第5个整数/10000.0f
+};//该结构定义了单个控制量的结构
 
 /** mixer input */
 struct mixer_control_s {
 	uint8_t			control_group;	/**< group from which the input reads */
 	uint8_t			control_index;	/**< index within the control group */
 	struct mixer_scaler_s 	scaler;		/**< scaling applied to the input before use */
-};
+};//定义输入量的结构
 
 /** simple mixer */
 struct mixer_simple_s {
-	uint8_t			control_count;	/**< number of inputs */
-	struct mixer_scaler_s	output_scaler;	/**< scaling for the output */
+	uint8_t			control_count;	/**< number of inputs 23.
+	//因为一个mixer只有一个输出，可以有0到多个输入，所以control_count指明了这个mixer所需要的输入信号数量，而具体的信号都存放在数组controls[0]中。*/
+	struct mixer_scaler_s	output_scaler;	/**< scaling for the output 输出则由output_scaler来控制. */
 	struct mixer_control_s	controls[0];	/**< actual size of the array is set by control_count */
-};
+};//定义了一个控制实体的控制体，包括输入的信号数量，输入信号控制集，输出信号控制。
 
 #define MIXER_SIMPLE_SIZE(_icount)	(sizeof(struct mixer_simple_s) + (_icount) * sizeof(struct mixer_control_s))
 

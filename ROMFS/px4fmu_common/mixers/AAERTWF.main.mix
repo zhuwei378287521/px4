@@ -7,6 +7,18 @@ The configuration assumes the aileron servo(s) are connected to PX4FMU servo
 output 0 and 1, the elevator to output 2, the rudder to output 3, the throttle
 to output 4 and the wheel to output 5.
 
+
+该文件定义了适合于控制固定翼飞机的混合器
+
+使用PX4FMU的副翼、舵、升降舵、节流阀和可操控轮控制。
+
+配置假设副翼伺服(s)连接到PX4FMU伺服系统
+
+输出0和1，电梯输出2，舵输出3，节流阀
+
+输出4和车轮输出5。
+
+
 Inputs to the mixer come from channel group 0 (vehicle attitude), channels 0
 (roll), 1 (pitch), 2 (yaw) and 3 (thrust) 4 (flaps).
 
@@ -17,6 +29,16 @@ This mixer assumes that the aileron servos are set up correctly mechanically;
 depending on the actual configuration it may be necessary to reverse the scaling
 factors (to reverse the servo movement) and adjust the offset, scaling and
 endpoints to suit.
+
+
+该混合器假设在机械上正确设置副翼伺服器;
+
+根据实际的配置，可能需要反转缩放
+
+因素(扭转伺服运动)和调整偏移，缩放和
+
+端点来适应。
+
 
 M: 1
 O:      10000  10000      0 -10000  10000

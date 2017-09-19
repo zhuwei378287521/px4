@@ -51,21 +51,25 @@ namespace math
 #define M_PI_F 3.14159265358979323846f
 #endif
 
+//返回弧度，精度为单精度
 float __EXPORT radians(float degrees)
 {
 	return (degrees / 180.0f) * M_PI_F;
 }
 
+//返回弧度，精度为双精度
 double __EXPORT radians(double degrees)
 {
 	return (degrees / 180.0) * M_PI;
 }
 
+//返回角度，精度为单精度
 float __EXPORT degrees(float radians)
 {
 	return (radians / M_PI_F) * 180.0f;
 }
 
+//返回角度，精度为双精度
 double __EXPORT degrees(double radians)
 {
 	return (radians / M_PI) * 180.0;

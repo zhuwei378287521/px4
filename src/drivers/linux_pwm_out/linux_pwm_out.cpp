@@ -130,7 +130,7 @@ int mixer_control_callback(uintptr_t handle,
 	return 0;
 }
 
-
+//³õÊ¼»¯»ìºÏÆ÷
 int initialize_mixer(const char *mixer_filename)
 {
 	char buf[4096];

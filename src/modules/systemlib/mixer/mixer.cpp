@@ -35,6 +35,7 @@
  * @file mixer.cpp
  *
  * Programmable multi-channel mixer library.
+ * 此文件是用于解析mixer数据的时候，一些公共函数，比如读取首字符，跳过行等。
  */
 
 #include <px4_config.h>
@@ -98,6 +99,7 @@ Mixer::scale(const mixer_scaler_s &scaler, float input)
 	return output;
 }
 
+//比例系数检查，看是否非法
 int
 Mixer::scale_check(struct mixer_scaler_s &scaler)
 {
@@ -139,6 +141,7 @@ Mixer::findtag(const char *buf, unsigned &buflen, char tag)
 	return nullptr;
 }
 
+//跳过一行，在解析数据的时候要用
 const char *
 Mixer::skipline(const char *buf, unsigned &buflen)
 {
@@ -153,7 +156,7 @@ Mixer::skipline(const char *buf, unsigned &buflen)
 
 	return nullptr;
 }
-
+//判断字符串是否正确
 bool
 Mixer::string_well_formed(const char *buf, unsigned &buflen)
 {

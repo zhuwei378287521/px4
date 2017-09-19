@@ -23,6 +23,49 @@ input is inverted between the two servos.
 The scaling factor for roll inputs is adjusted to implement differential travel
 for the elevons.
 
+有道 - 网易旗下搜索
+免费、即时的多语种在线翻译
+登录 |添加书签
+806 / 5000
+检测到：英语 » 中文
+自动翻译
+人工翻译
+
+三角翼的混合器为PX4FMU
+
+= = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+专为Bormatec Camflyer Q设计
+
+该文件定义了适合于控制三角翼飞机使用的混合器
+
+PX4FMU。该配置假设连接到PX4FMU的升降伺服系统
+
+伺服输出0和1，电机转速控制输出3。输出2
+
+认为是未使用的。
+
+输入到搅拌器的是通道组0(车辆态度)，通道0
+
+(滚)，1(俯仰)和3(推力)。
+
+有关scaler格式的更多信息，请参阅README。
+
+升降副翼搅拌机
+
+- - - - - - - - - - - - -
+
+三个标量(输出，滚动，俯仰)。
+
+假设两个升降副翼在物理上是相反的，音高
+
+输入在两个伺服系统之间颠倒。
+
+调整了轧辊输入的比例系数，以实现差动行程
+
+升降副翼。
+
+
 M: 2
 O:      10000  10000      0 -10000  10000
 S: 0 0  -8000  -8000      0 -10000  10000
@@ -42,6 +85,7 @@ Z:
 Motor speed mixer
 -----------------
 Two scalers total (output, thrust).
+油门通道的混控器
 
 This mixer generates a full-range output (-1 to 1) from an input in the (0 - 1)
 range.  Inputs below zero are treated as zero.
@@ -49,3 +93,4 @@ range.  Inputs below zero are treated as zero.
 M: 1
 O:      10000  10000      0 -10000  10000
 S: 0 3      0  20000 -10000 -10000  10000
+第0组第三通道，，负比例为0，正比例为20000，偏移10000  最小值 -10000 最大值 10000

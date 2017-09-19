@@ -149,7 +149,9 @@ Battery::sumDischarged(hrt_abstime timestamp, float current_a)
 {
 	// Not a valid measurement
 	if (current_a < 0.0f) {
+		//因为测量是无效的我们需要停止集成
 		// Because the measurement was invalid we need to stop integration
+		//用下一个有效度量重新初始化
 		// and re-initialize with the next valid measurement
 		_last_timestamp = 0;
 		return;
@@ -163,6 +165,8 @@ Battery::sumDischarged(hrt_abstime timestamp, float current_a)
 	_last_timestamp = timestamp;
 }
 
+//估计剩余
+//input：voltage_v电压，current_a当前电流，throttle_normalized正常油门，armed是否锁定
 void
 Battery::estimateRemaining(float voltage_v, float current_a, float throttle_normalized, bool armed)
 {
@@ -220,7 +224,7 @@ Battery::estimateRemaining(float voltage_v, float current_a, float throttle_norm
 		_remaining = _remaining_voltage;
 	}
 }
-
+//确定警告
 void
 Battery::determineWarning()
 {
@@ -235,11 +239,11 @@ Battery::determineWarning()
 		_warning = battery_status_s::BATTERY_WARNING_LOW;
 	}
 }
-
+//计算比例
 void
 Battery::computeScale()
 {
-	const float voltage_range = (_param_v_full.get() - _param_v_empty.get());
+	const float voltage_range = (_param_v_full.get() - _param_v_empty.get());//计算电压范围，计算后，是一个常数
 
 	// reusing capacity calculation to get single cell voltage before drop
 	const float bat_v = _param_v_empty.get() + (voltage_range * _remaining_voltage);

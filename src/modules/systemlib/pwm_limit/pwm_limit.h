@@ -49,6 +49,7 @@ __BEGIN_DECLS
 
 /*
  * time for the ESCs to initialize
+ *电调启动等待时间
  * (this is not actually needed if PWM is sent right after boot)
  */
 #define INIT_TIME_US 50000

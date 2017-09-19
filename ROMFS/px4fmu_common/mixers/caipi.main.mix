@@ -8,6 +8,16 @@ PX4FMU. The configuration assumes the elevon servos are connected to PX4FMU
 servo outputs 0 and 1 and the motor speed control to output 3. Output 2 is
 assumed to be unused.
 
+
+该文件定义了适合于控制三角翼飞机使用的混合器
+
+PX4FMU。该配置假设连接到PX4FMU的升降伺服系统
+
+伺服输出0和1，电机转速控制输出3。输出2
+
+认为是未使用的。
+
+
 Inputs to the mixer come from channel group 0 (vehicle attitude), channels 0
 (roll), 1 (pitch) and 3 (thrust).
 

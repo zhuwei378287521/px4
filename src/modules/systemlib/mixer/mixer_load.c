@@ -33,7 +33,7 @@
 
 /**
  * @file mixer_load.c
- *
+ *加载mixer参数
  * Programmable multi-channel mixer library.
  */
 
@@ -44,14 +44,26 @@
 #include <systemlib/err.h>
 
 #include "mixer_load.h"
-
+//加载文件，所有的mixer都写成一个文件，通过存取sd卡，用指令加载到romFS中
+/**
+ * input：fname文件名，buf读取文件内容结果，maxlen为buf最大长度
+ * 该函数会剔除符合下面任何一条的行：
+1.行长度小于2个字符的行
+2.行的首字符不是大写字母的行
+3.第二个字符不是':'的行
+剔除这些非法内容的数据后，剩余的全部为格式化的内容，会被全部存入buf缓冲区中。
+所以这要求在写mix文件时要遵循mix和格式。
+这些格式化的mix内容被读取缓冲区后，就会通过函数
+int ret = ioctl(dev, MIXERIOCLOADBUF, (unsigned long)buf);
+来交给具体的设备处理。
+ */
 int load_mixer_file(const char *fname, char *buf, unsigned maxlen)
 {
 	FILE		*fp;
 	char		line[120];
 
 	/* open the mixer definition file */
-	fp = fopen(fname, "r");
+	fp = fopen(fname, "r");//打开目标文件
 
 	if (fp == NULL) {
 		warnx("file not found");
@@ -61,25 +73,25 @@ int load_mixer_file(const char *fname, char *buf, unsigned maxlen)
 	/* read valid lines from the file into a buffer */
 	buf[0] = '\0';
 
-	for (;;) {
+	for (;;) {//死循环
 
 		/* get a line, bail on error/EOF */
 		line[0] = '\0';
 
-		if (fgets(line, sizeof(line), fp) == NULL) {
+		if (fgets(line, sizeof(line), fp) == NULL) {//获取一整行
 			break;
 		}
 
 		/* if the line doesn't look like a mixer definition line, skip it */
 		if ((strlen(line) < 2) || !isupper(line[0]) || (line[1] != ':')) {
-			continue;
+			continue;//去除小于2个字符，开头不是大写，第二字符不是：号的行
 		}
 
 		/* compact whitespace in the buffer */
 		char *t, *f;
 
 		for (f = line; *f != '\0'; f++) {
-			/* scan for space characters */
+			/* scan for space characters *///去除空格
 			if (*f == ' ') {
 				/* look for additional spaces */
 				t = f + 1;
@@ -90,7 +102,7 @@ int load_mixer_file(const char *fname, char *buf, unsigned maxlen)
 
 				if (*t == '\0') {
 					/* strip trailing whitespace */
-					*f = '\0';
+					*f = '\0';//加入末尾
 
 				} else if (t > (f + 1)) {
 					memmove(f + 1, t, strlen(t) + 1);
@@ -103,10 +115,10 @@ int load_mixer_file(const char *fname, char *buf, unsigned maxlen)
 			warnx("line too long");
 			fclose(fp);
 			return -1;
-		}
+		}//太长，抛弃
 
 		/* add the line to the buffer */
-		strcat(buf, line);
+		strcat(buf, line);//复制信息到buf
 	}
 
 	fclose(fp);
