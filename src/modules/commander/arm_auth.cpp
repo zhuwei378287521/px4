@@ -1,6 +1,7 @@
 /****************************************************************************
  *
  *   Copyright (c) 2017  Intel Corporation. All rights reserved.
+
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +31,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
+/**
+ * 解锁认证，主要是看，一些设备是否达到解锁的条件。
+ */
+
 #include "arm_auth.h"
 
 #include <string.h>
@@ -117,7 +123,7 @@ static uint8_t _auth_method_arm_req_check()
 	auth_timeout = now + (arm_parameters.auth_method_param.auth_method_arm_timeout_msec * 1000);
 	state = ARM_AUTH_WAITING_AUTH;
 
-	while (now < auth_timeout) {
+	while (now < auth_timeout) {//如果没有超市
 		arm_auth_update(now);
 
 		if (state != ARM_AUTH_WAITING_AUTH && state != ARM_AUTH_WAITING_AUTH_WITH_ACK) {
@@ -179,6 +185,7 @@ uint8_t arm_auth_check()
 	return vehicle_command_ack_s::VEHICLE_RESULT_DENIED;
 }
 
+//更新状态标识
 void arm_auth_update(hrt_abstime now)
 {
 	param_get(param_arm_parameters, &arm_parameters);

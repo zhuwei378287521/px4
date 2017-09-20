@@ -35,7 +35,7 @@
 * @file PreflightCheck.cpp
 *
 * Preflight check for main system components
-*
+*起飞前检查
 * @author Lorenz Meier <lorenz@px4.io>
 * @author Johan Jansen <jnsn.johan@gmail.com>
 */
@@ -78,6 +78,7 @@ using namespace DriverFramework;
 namespace Commander
 {
 
+//检查校准
 static int check_calibration(DevHandle &h, const char* param_template, int &devid)
 {
 	bool calibration_found;

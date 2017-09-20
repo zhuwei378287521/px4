@@ -35,6 +35,7 @@
  * @file mag_calibration.cpp
  *
  * Magnetometer calibration routine
+ * 地磁校准
  */
 
 #include "mag_calibration.h"
@@ -95,7 +96,7 @@ typedef struct  {
 	float		*z[max_mags];
 } mag_worker_data_t;
 
-
+//执行地磁校准
 int do_mag_calibration(orb_advert_t *mavlink_log_pub)
 {
 	calibration_log_info(mavlink_log_pub, CAL_QGC_STARTED_MSG, sensor_name);
@@ -280,7 +281,7 @@ static bool reject_sample(float sx, float sy, float sz, float x[], float y[], fl
 
 	return false;
 }
-
+//计算进行百分比
 static unsigned progress_percentage(mag_worker_data_t *worker_data)
 {
 	return 100 * ((float)worker_data->done_count) / calibration_sides;

@@ -38,7 +38,7 @@
  * @author Lorenz Meier 	<lm@inf.ethz.ch>
  * @author Thomas Gubler 	<thomasgubler@gmail.com>
  * @author Roman Bapst		<bapstr@ethz.ch>
- *
+ *姿态控制
  */
 
 #include <px4_config.h>
@@ -729,15 +729,15 @@ FixedwingAttitudeControl::task_main()
 	/*
 	 * do subscriptions
 	 */
-	_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
-	_ctrl_state_sub = orb_subscribe(ORB_ID(control_state));
-	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
-	_params_sub = orb_subscribe(ORB_ID(parameter_update));
-	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
-	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
-	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));
-	_vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));
-	_battery_status_sub = orb_subscribe(ORB_ID(battery_status));
+	_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));//姿态设定点
+	_ctrl_state_sub = orb_subscribe(ORB_ID(control_state));//飞机控制状态
+	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));//控制模式
+	_params_sub = orb_subscribe(ORB_ID(parameter_update));//参数更新
+	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));//手动控制的设定
+	_global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));//车辆全球位置
+	_vehicle_status_sub = orb_subscribe(ORB_ID(vehicle_status));//飞机状态
+	_vehicle_land_detected_sub = orb_subscribe(ORB_ID(vehicle_land_detected));//着陆探测
+	_battery_status_sub = orb_subscribe(ORB_ID(battery_status));//电池状态
 
 	parameters_update();
 
@@ -801,16 +801,16 @@ FixedwingAttitudeControl::task_main()
 				deltaT = 0.01f;
 			}
 
-			/* load local copies */
+			/* load local copies  知道当前的姿态*/
 			orb_copy(ORB_ID(control_state), _ctrl_state_sub, &_ctrl_state);
 
-
+			//这通过获取当前姿态的消息，然后得到四元数，转化为旋转矩阵，进而求得姿态角：
 			/* get current rotation matrix and euler angles from control state quaternions */
-			math::Quaternion q_att(_ctrl_state.q[0], _ctrl_state.q[1], _ctrl_state.q[2], _ctrl_state.q[3]);
-			_R = q_att.to_dcm();
+			math::Quaternion q_att(_ctrl_state.q[0], _ctrl_state.q[1], _ctrl_state.q[2], _ctrl_state.q[3]);//得到四元数
+			_R = q_att.to_dcm();//转化为旋转矩阵
 
 			math::Vector<3> euler_angles;
-			euler_angles = _R.to_euler();
+			euler_angles = _R.to_euler();//求得姿态角
 			_roll    = euler_angles(0);
 			_pitch   = euler_angles(1);
 			_yaw     = euler_angles(2);
@@ -901,6 +901,7 @@ FixedwingAttitudeControl::task_main()
 			/* default flaps to center */
 			float flap_control = 0.0f;
 
+			//然后是襟副翼的设定，分为手动控制和自动控制
 			/* map flaps by default to manual if valid */
 			if (PX4_ISFINITE(_manual.flaps) && _vcontrol_mode.flag_control_manual_enabled
 			    && fabsf(_parameters.flaps_scale) > 0.01f) {
@@ -1057,13 +1058,14 @@ FixedwingAttitudeControl::task_main()
 
 				_yaw_ctrl.set_coordinated_method(_parameters.y_coordinated_method);
 
-				/* Run attitude controllers */
+				/* Run attitude controllers 接下来就是通过订阅的消息来判断是否能够控制姿态*/
 				if (_vcontrol_mode.flag_control_attitude_enabled) {
 					if (PX4_ISFINITE(roll_sp) && PX4_ISFINITE(pitch_sp)) {
 						_roll_ctrl.control_attitude(control_input);
 						_pitch_ctrl.control_attitude(control_input);
 						_yaw_ctrl.control_attitude(control_input); //runs last, because is depending on output of roll and pitch attitude
 						_wheel_ctrl.control_attitude(control_input);
+//最后运行这个姿态控制器，也是上面做的所有工作，都是为这些做准备control_attitude（）
 
 						/* Update input data for rate controllers */
 						control_input.roll_rate_setpoint = _roll_ctrl.get_desired_rate();

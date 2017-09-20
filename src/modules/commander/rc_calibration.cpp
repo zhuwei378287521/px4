@@ -34,6 +34,7 @@
 /**
  * @file rc_calibration.cpp
  * Remote Control calibration routine
+ * Ò£¿ØÆ÷Ð£×¼
  */
 
 #include <px4_posix.h>

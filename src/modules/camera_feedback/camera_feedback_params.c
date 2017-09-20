@@ -40,7 +40,7 @@
 
 /**
  * Camera feedback mode
- *
+ *相机反馈模式
  * Sets the camera feedback mode.
  *
  * @value 0 Disabled

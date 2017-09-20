@@ -35,7 +35,7 @@
  * @file camera_feedback.cpp
  *
  * Online and offline geotagging from camera feedback
- *
+ *获取线上和线下的地理位置，从摄像机的反馈，并不是用来操作相机的。
  * @author Mohammed Kabir <kabir@uasys.io>
  */
 
@@ -69,6 +69,7 @@ CameraFeedback::~CameraFeedback()
 	if (_main_task != -1) {
 
 		/* task wakes up every 100ms or so at the longest */
+		//任务唤醒时间间隔
 		_task_should_exit = true;
 
 		/* wait for a second for the task to quit at our request */
@@ -89,6 +90,7 @@ CameraFeedback::~CameraFeedback()
 	camera_feedback::g_camera_feedback = nullptr;
 }
 
+//启动线程
 int
 CameraFeedback::start()
 {
@@ -120,18 +122,20 @@ CameraFeedback::stop()
 	}
 }
 
-
+//任务循环线程函数
 void
 CameraFeedback::task_main()
 {
 
 	// We only support trigger feedback for now
+	//当前只支持简单触发反馈，一般为继电器方式
 	// This will later be extended to support hardware feedback from the camera.
+	//我们将在以后支持硬件触发，指PWM
 	if (_camera_feedback_mode != CAMERA_FEEDBACK_MODE_TRIGGER) {
 		return;
 	}
 
-	// Polling sources
+	// Polling sources订阅camera_trigger这个信号
 	_trigger_sub = orb_subscribe(ORB_ID(camera_trigger));
 	struct camera_trigger_s trig = {};
 
@@ -149,7 +153,7 @@ CameraFeedback::task_main()
 
 	while (!_task_should_exit) {
 
-		/* wait for up to 20ms for data */
+		/* wait for up to 20ms for data 20ms获取一次数据*/
 		int pret = px4_poll(&fds[0], (sizeof(fds) / sizeof(fds[0])), 20);
 
 		if (pret < 0) {
@@ -159,7 +163,7 @@ CameraFeedback::task_main()
 
 		/* trigger subscription updated */
 		if (fds[0].revents & POLLIN) {
-
+//如果数据有更新
 			orb_copy(ORB_ID(camera_trigger), _trigger_sub, &trig);
 
 			/* update geotagging subscriptions */
@@ -184,6 +188,7 @@ CameraFeedback::task_main()
 
 			struct camera_capture_s capture = {};
 
+			//以下代码将获取到的信息，存入结构体
 			// Fill timestamps
 			capture.timestamp = trig.timestamp;
 
@@ -216,6 +221,7 @@ CameraFeedback::task_main()
 
 			int instance_id;
 
+			//将信息发布出去。
 			orb_publish_auto(ORB_ID(camera_capture), &_capture_pub, &capture, &instance_id, ORB_PRIO_DEFAULT);
 
 		}

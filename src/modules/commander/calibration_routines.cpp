@@ -34,7 +34,7 @@
 /**
  * @file calibration_routines.cpp
  * Calibration routines implementations.
- *
+ *校准原型程序
  * @author Lorenz Meier <lm@inf.ethz.ch>
  */
 
@@ -61,6 +61,7 @@
 #include "calibration_messages.h"
 #include "commander_helper.h"
 
+//球形最小二乘
 int sphere_fit_least_squares(const float x[], const float y[], const float z[],
 			     unsigned int size, unsigned int max_iterations, float delta, float *sphere_x, float *sphere_y, float *sphere_z,
 			     float *sphere_radius)
@@ -235,7 +236,7 @@ int sphere_fit_least_squares(const float x[], const float y[], const float z[],
 
 	return 0;
 }
-
+//椭球符合最小二乘
 int ellipsoid_fit_least_squares(const float x[], const float y[], const float z[],
 				unsigned int size, unsigned int max_iterations, float delta, float *offset_x, float *offset_y, float *offset_z,
 				float *sphere_radius, float *diag_x, float *diag_y, float *diag_z, float *offdiag_x, float *offdiag_y, float *offdiag_z)
@@ -259,7 +260,7 @@ int ellipsoid_fit_least_squares(const float x[], const float y[], const float z[
 
 	return 0;
 }
-
+//运行球形最小二乘法
 int run_lm_sphere_fit(const float x[], const float y[], const float z[], float &_fitness, float &_sphere_lambda,
 		      unsigned int size, float *offset_x, float *offset_y, float *offset_z,
 		      float *sphere_radius, float *diag_x, float *diag_y, float *diag_z, float *offdiag_x, float *offdiag_y, float *offdiag_z)
@@ -387,6 +388,7 @@ int run_lm_sphere_fit(const float x[], const float y[], const float z[], float &
 	}
 }
 
+//运行椭圆最小二乘法
 int run_lm_ellipsoid_fit(const float x[], const float y[], const float z[], float &_fitness, float &_sphere_lambda,
 			 unsigned int size, float *offset_x, float *offset_y, float *offset_z,
 			 float *sphere_radius, float *diag_x, float *diag_y, float *diag_z, float *offdiag_x, float *offdiag_y, float *offdiag_z)
@@ -527,6 +529,7 @@ int run_lm_ellipsoid_fit(const float x[], const float y[], const float z[], floa
 	}
 }
 
+//检测方向
 enum detect_orientation_return detect_orientation(orb_advert_t *mavlink_log_pub, int cancel_sub, int accel_sub,
 		bool lenient_still_position)
 {
@@ -683,7 +686,7 @@ const char *detect_orientation_str(enum detect_orientation_return orientation)
 
 	return rgOrientationStrs[orientation];
 }
-
+//通过方向校准
 calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,
 		int		cancel_sub,
 		bool	side_data_collected[detect_orientation_side_count],
@@ -800,12 +803,12 @@ calibrate_return calibrate_from_orientation(orb_advert_t *mavlink_log_pub,
 
 	return result;
 }
-
+//校准订阅
 int calibrate_cancel_subscribe()
 {
 	return orb_subscribe(ORB_ID(vehicle_command));
 }
-
+//取消校准订阅
 void calibrate_cancel_unsubscribe(int cmd_sub)
 {
 	orb_unsubscribe(cmd_sub);

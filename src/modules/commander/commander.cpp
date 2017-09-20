@@ -35,6 +35,7 @@
  * @file commander.cpp
  *
  * Main state machine / business logic
+ * 这文件文件最重要的，就是飞行模式切换
  *
  * @author Petri Tanskanen	<petri.tanskanen@inf.ethz.ch>
  * @author Lorenz Meier		<lorenz@px4.io>
@@ -135,8 +136,10 @@ typedef enum VEHICLE_MODE_FLAG
 	VEHICLE_MODE_FLAG_SAFETY_ARMED=128, /* 0b10000000 MAV safety set to armed. Motors are enabled / running / can start. Ready to fly. | */
 	VEHICLE_MODE_FLAG_ENUM_END=129, /*  | */
 } VEHICLE_MODE_FLAG;
+//机器模式标志
 
-static constexpr uint8_t COMMANDER_MAX_GPS_NOISE = 60;		/**< Maximum percentage signal to noise ratio allowed for GPS reception */
+static constexpr uint8_t COMMANDER_MAX_GPS_NOISE = 60;		/**< Maximum percentage signal to noise ratio allowed for GPS reception
+允许GPS接收最大百分比信噪比*/
 
 /* Decouple update interval and hysteresis counters, all depends on intervals */
 #define COMMANDER_MONITORING_INTERVAL 10000
@@ -373,7 +376,7 @@ static int power_button_state_notification_cb(board_power_button_state_notificat
 
 	return ret;
 }
-
+//命令的主程序
 int commander_main(int argc, char *argv[])
 {
 	if (argc < 2) {
@@ -650,16 +653,16 @@ int commander_main(int argc, char *argv[])
 	usage("unrecognized command");
 	return 1;
 }
-
+//命令帮助
 void usage(const char *reason)
 {
 	if (reason && *reason > 0) {
 		PX4_INFO("%s", reason);
 	}
-
+//可以解锁，加锁，登陆
 	PX4_INFO("usage: commander {start|stop|status|calibrate|check|arm|disarm|takeoff|land|transition|mode}\n");
 }
-
+//打印状态信息
 void print_status()
 {
 	warnx("type: %s", (status.is_rotary_wing) ? "symmetric motion" : "forward motion");
@@ -759,7 +762,7 @@ transition_result_t arm_disarm(bool arm, orb_advert_t *mavlink_log_pub_local, co
 
 	return arming_res;
 }
-
+//处理命令
 bool handle_command(struct vehicle_status_s *status_local, const struct safety_s *safety_local,
 		    struct vehicle_command_s *cmd, struct actuator_armed_s *armed_local,
 		    struct home_position_s *home, struct vehicle_global_position_s *global_pos,
@@ -1259,6 +1262,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 /**
 * @brief This function initializes the home position of the vehicle. This happens first time we get a good GPS fix and each
 *		 time the vehicle is armed with a good GPS fix.
+*		 设置家位置
 **/
 static void commander_set_home_position(orb_advert_t &homePub, home_position_s &home,
 					const vehicle_local_position_s &localPosition, const vehicle_global_position_s &globalPosition,
@@ -1305,7 +1309,7 @@ static void commander_set_home_position(orb_advert_t &homePub, home_position_s &
 	/* mark home position as set */
 	status_flags.condition_home_position_valid = true;
 }
-
+//系统调用commander的主线程函数
 int commander_thread_main(int argc, char *argv[])
 {
 	/* not yet initialized */
@@ -1452,7 +1456,7 @@ int commander_thread_main(int argc, char *argv[])
 		PX4_ERR("Failed to register power notification callback");
 	}
 
-	// We want to accept RC inputs as default
+	// We want to accept RC inputs as default   我们希望遥控器作为默认的远程控制
 	status_flags.rc_input_blocked = false;
 	status.rc_input_mode = vehicle_status_s::RC_IN_MODE_DEFAULT;
 	internal_state.main_state = commander_state_s::MAIN_STATE_MANUAL;
@@ -2695,7 +2699,7 @@ int commander_thread_main(int argc, char *argv[])
 		/* RC input check */
 		if (!status_flags.rc_input_blocked && sp_man.timestamp != 0 &&
 		    (hrt_absolute_time() < sp_man.timestamp + (uint64_t)(rc_loss_timeout * 1e6f))) {
-			/* handle the case where RC signal was regained */
+			/* handle the case where RC signal was regained *//* 处理信号失而复得的情况 */
 			if (!status_flags.rc_signal_found_once) {
 				status_flags.rc_signal_found_once = true;
 				status_changed = true;
@@ -2713,7 +2717,8 @@ int commander_thread_main(int argc, char *argv[])
 			const bool in_armed_state = status.arming_state == vehicle_status_s::ARMING_STATE_ARMED || status.arming_state == vehicle_status_s::ARMING_STATE_ARMED_ERROR;
 			const bool arm_button_pressed = arm_switch_is_button == 1 && sp_man.arm_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 
-			/* DISARM
+			/* 检查油门杆在左下角的位置&&在手动&&(Rattitude||AUTO_READY mode||ASSIST mode and landed，如果是，则上锁
+			/* DISARM上锁
 			 * check if left stick is in lower left position or arm button is pushed or arm switch has transition from arm to disarm
 			 * and we are in MANUAL, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
 			 * do it only for rotary wings in manual mode or fixed wing if landed */
@@ -2738,7 +2743,7 @@ int commander_thread_main(int argc, char *argv[])
 					/* disarm to STANDBY if ARMED or to STANDBY_ERROR if ARMED_ERROR */
 					arming_state_t new_arming_state = (status.arming_state == vehicle_status_s::ARMING_STATE_ARMED ? vehicle_status_s::ARMING_STATE_STANDBY :
 									   vehicle_status_s::ARMING_STATE_STANDBY_ERROR);
-					arming_ret = arming_state_transition(&status,
+					arming_ret = arming_state_transition(&status,    //锁定状态改变
 									     &battery,
 									     &safety,
 									     new_arming_state,
@@ -2760,6 +2765,7 @@ int commander_thread_main(int argc, char *argv[])
 				stick_off_counter = 0;
 			}
 
+			/* 检查油门杆在右下角的位置&&手动模式，如果是，则解锁 */
 			/* ARM
 			 * check if left stick is in lower right position or arm button is pushed or arm switch has transition from disarm to arm
 			 * and we're in MANUAL mode */
@@ -2792,7 +2798,7 @@ int commander_thread_main(int argc, char *argv[])
 						print_reject_arm("NOT ARMING: Geofence RTL requires valid home");
 
 					} else if (status.arming_state == vehicle_status_s::ARMING_STATE_STANDBY) {
-						arming_ret = arming_state_transition(&status,
+						arming_ret = arming_state_transition(&status,      //锁定状态改变
 										     &battery,
 										     &safety,
 										     vehicle_status_s::ARMING_STATE_ARMED,
@@ -2853,6 +2859,7 @@ int commander_thread_main(int argc, char *argv[])
 			/* check throttle kill switch */
 			if (sp_man.kill_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 				/* set lockdown flag */
+				/* 设置锁定标志 */
 				if (!armed.manual_lockdown) {
 					mavlink_log_emergency(&mavlink_log_pub, "MANUAL KILL SWITCH ENGAGED");
 				}
@@ -3270,7 +3277,7 @@ int commander_thread_main(int argc, char *argv[])
 
 	return 0;
 }
-
+//获取    参数？
 void
 get_circuit_breaker_params()
 {
@@ -3282,7 +3289,7 @@ get_circuit_breaker_params()
 	status_flags.circuit_breaker_flight_termination_disabled = circuit_breaker_enabled("CBRK_FLIGHTTERM", CBRK_FLIGHTTERM_KEY);
 	status_flags.circuit_breaker_engaged_posfailure_check = circuit_breaker_enabled("CBRK_VELPOSERR", CBRK_VELPOSERR_KEY);
 }
-
+//检查是否合法
 void
 check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *valid_out, bool *changed)
 {
@@ -3294,7 +3301,7 @@ check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *val
 		*changed = true;
 	}
 }
-
+//控制状态LED
 void
 control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actuator_armed,
 	bool changed, battery_status_s *battery_local, const cpuload_s *cpuload_local)
@@ -3488,6 +3495,7 @@ set_main_state_rc(struct vehicle_status_s *status_local, vehicle_global_position
 		}
 	}
 
+	/***********************第二个判断***********************/
 	/* RTL switch overrides main switch */
 	if (sp_man.return_switch == manual_control_setpoint_s::SWITCH_POS_ON) {
 		res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_RTL, main_state_prev, &status_flags, &internal_state);
@@ -3519,6 +3527,7 @@ set_main_state_rc(struct vehicle_status_s *status_local, vehicle_global_position
 		}
 	}
 
+	/***********************第三个判断***********************/
 	/* we know something has changed - check if we are in mode slot operation */
 	if (sp_man.mode_slot != manual_control_setpoint_s::MODE_SLOT_NONE) {
 
@@ -3657,14 +3666,14 @@ set_main_state_rc(struct vehicle_status_s *status_local, vehicle_global_position
 
 		return res;
 	}
-
+	/***********************第四个判断***********************/
 	/* offboard and RTL switches off or denied, check main mode switch */
 	switch (sp_man.mode_switch) {
 	case manual_control_setpoint_s::SWITCH_POS_NONE:
 		res = TRANSITION_NOT_CHANGED;
 		break;
 
-	case manual_control_setpoint_s::SWITCH_POS_OFF:		// MANUAL
+	case manual_control_setpoint_s::SWITCH_POS_OFF:		// MANUAL 手动
 		if (sp_man.stab_switch == manual_control_setpoint_s::SWITCH_POS_NONE &&
 			sp_man.man_switch == manual_control_setpoint_s::SWITCH_POS_NONE) {
 			/*
@@ -3868,7 +3877,8 @@ check_posvel_validity(bool data_valid, float data_accuracy, float required_accur
 		}
 	}
 }
-
+//设置控制模式
+//根据status.nav_state确定control_mode.flag_xxx
 void
 set_control_mode()
 {
@@ -4078,7 +4088,7 @@ set_control_mode()
 		break;
 	}
 }
-
+//建立请求
 bool
 stabilization_required()
 {
@@ -4445,7 +4455,7 @@ void *commander_low_prio_loop(void *arg)
 
 	return nullptr;
 }
-
+//发布状态标识
 void publish_status_flags(orb_advert_t &vehicle_status_flags_pub) {
 	struct vehicle_status_flags_s v_flags;
 	memset(&v_flags, 0, sizeof(v_flags));

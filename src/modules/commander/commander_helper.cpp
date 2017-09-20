@@ -34,6 +34,7 @@
 /**
  * @file commander_helper.cpp
  * Commander helper functions implementations
+ * 指挥官辅助函数实现
  *
  * @author Thomas Gubler <thomasgubler@student.ethz.ch>
  * @author Julian Oes <julian@oes.ch>

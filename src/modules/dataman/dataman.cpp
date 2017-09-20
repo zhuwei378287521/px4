@@ -33,6 +33,7 @@
 /**
  * @file dataman.cpp
  * DATAMANAGER driver.
+ * 数据管理
  *
  * @author Jean Cyr
  * @author Lorenz Meier

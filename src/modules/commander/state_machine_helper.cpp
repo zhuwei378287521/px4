@@ -117,6 +117,7 @@ void reset_link_loss_globals(struct actuator_armed_s *armed,
 			     const bool old_failsafe,
 			     const link_loss_actions_t link_loss_act);
 
+//锁定状态改变
 transition_result_t arming_state_transition(vehicle_status_s *status,
                                             battery_status_s *battery,
                                             const struct safety_s *safety,
@@ -372,7 +373,7 @@ bool is_safe(const struct safety_s *safety, const struct actuator_armed_s *armed
 
 	return !armed->armed || (armed->armed && lockdown) || (safety->safety_switch_available && !safety->safety_off);
 }
-
+//根据遥控信息和飞行器状态status_flags决定是否能更变internal_state->main_state
 transition_result_t
 main_state_transition(struct vehicle_status_s *status, main_state_t new_main_state, uint8_t &main_state_prev,
 		      status_flags_s *status_flags, struct commander_state_s *internal_state)
@@ -560,6 +561,8 @@ void enable_failsafe(struct vehicle_status_s *status, bool old_failsafe, orb_adv
 
 /**
  * Check failsafe and main status and set navigation status for navigator accordingly
+ * 根据internal_state->main_state和飞行器状态status_flags(传感器等硬件正常否)
+ * 确定能否完成internal_state->main_state所指定的模式，若飞行器状态不行，则将模式跟新为status->nav_state。
  */
 bool set_nav_state(struct vehicle_status_s *status,
 		   struct actuator_armed_s *armed,

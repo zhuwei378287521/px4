@@ -35,7 +35,7 @@
  * @file calibration_messages.h
  *
  * Common calibration messages.
- *
+ *常用校准输出信息，用于标准化格式
  * @author Anton Babushkin <anton.babushkin@me.com>
  */
 

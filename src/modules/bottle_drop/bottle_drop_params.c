@@ -50,6 +50,12 @@
  * @min 0.001
  * @max 0.1
  * @group Payload drop
+ *
+
+该参数对地面阻力系数和相应的参数进行编码
+
+*风速从飞机高度下降到地面高度。
+ *
  */
 PARAM_DEFINE_FLOAT(BD_GPROPERTIES, 0.03f);
 
@@ -59,6 +65,11 @@ PARAM_DEFINE_FLOAT(BD_GPROPERTIES, 0.03f);
  * The planes known minimal turn radius - use a higher value
  * to make the plane maneuver more distant from the actual drop
  * position. This is to ensure the wings are level during the drop.
+ *
+*已知最小转弯半径的飞机-使用更高的值
+*使飞机的操控距离实际下降更远
+*位置。这是为了确保在下降的时候翅膀是水平的。
+ *
  *
  * @unit m
  * @min 30.0
@@ -73,6 +84,11 @@ PARAM_DEFINE_FLOAT(BD_TURNRADIUS, 120.0f);
  * If the system is closer than this distance on passing over the
  * drop position, it will release the payload. This is a safeguard
  * to prevent a drop out of the required accuracy.
+ *
+*如果系统比这段距离更近
+*下降位置，它将释放负载。这是一个保障
+*为了防止被要求的精度的下降。
+ *
  *
  * @unit m
  * @min 1.0
@@ -93,6 +109,14 @@ PARAM_DEFINE_FLOAT(BD_PRECISION, 30.0f);
  * @min 0.08
  * @max 1.5
  * @group Payload drop
+ *
+*下降物体的有效载荷阻力系数
+*
+*阻力系数(cd)是典型的阻力
+*空气常数。它一般是特定对象的，
+*但最接近实际物体的原始形状
+*应该会有好的结果:
+ *
  */
 PARAM_DEFINE_FLOAT(BD_OBJ_CD, 0.1f);
 
@@ -114,7 +138,7 @@ PARAM_DEFINE_FLOAT(BD_OBJ_MASS, 0.6f);
 
 /**
  * Payload front surface area
- *
+ *有效载荷前表面积
  * A typical small toy ball:
  *   (0.045 * 0.045) / 4.0 * pi = 0.001590 m^2
  *

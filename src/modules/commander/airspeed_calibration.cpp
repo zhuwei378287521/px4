@@ -58,13 +58,13 @@
 #include <systemlib/airspeed.h>
 
 static const char *sensor_name = "airspeed";
-
+//反馈空速计校准失败
 static void feedback_calibration_failed(orb_advert_t *mavlink_log_pub)
 {
 	sleep(5);
 	calibration_log_critical(mavlink_log_pub, CAL_QGC_FAILED_MSG, sensor_name);
 }
-
+//空速计校准流程
 int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 {
 	int result = PX4_OK;
@@ -72,16 +72,16 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 	const unsigned maxcount = 2400;
 
 	/* give directions */
-	calibration_log_info(mavlink_log_pub, CAL_QGC_STARTED_MSG, sensor_name);
+	calibration_log_info(mavlink_log_pub, CAL_QGC_STARTED_MSG, sensor_name);//打印空速计开始校准信息
 
-	const unsigned calibration_count = (maxcount * 2) / 3;
+	const unsigned calibration_count = (maxcount * 2) / 3;//校准数据个数
 
 	int diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	struct differential_pressure_s diff_pres;
 
 	float diff_pres_offset = 0.0f;
 
-	/* Reset sensor parameters */
+	/* Reset sensor parameters 重置所有的传感器参数（指空速计）*/
 	struct airspeed_scale airscale = {
 		diff_pres_offset,
 		1.0f,
@@ -197,7 +197,7 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 	calibration_counter = 0;
 
 	/* just take a few samples and make sure pitot tubes are not reversed, timeout after ~30 seconds */
-	while (calibration_counter < maxcount) {
+	while (calibration_counter < maxcount) {//一直循环，知道获取到足够的校准数据
 
 		if (calibrate_cancel_check(mavlink_log_pub, cancel_sub)) {
 			goto error_return;
@@ -208,10 +208,10 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 		fds[0].fd = diff_pres_sub;
 		fds[0].events = POLLIN;
 
-		int poll_ret = px4_poll(fds, 1, 1000);
+		int poll_ret = px4_poll(fds, 1, 1000);//查看是否有数据
 
 		if (poll_ret) {
-			orb_copy(ORB_ID(differential_pressure), diff_pres_sub, &diff_pres);
+			orb_copy(ORB_ID(differential_pressure), diff_pres_sub, &diff_pres);//获取到数据
 
 			if (fabsf(diff_pres.differential_pressure_filtered_pa) > 50.0f) {
 				if (diff_pres.differential_pressure_filtered_pa > 0) {
@@ -242,7 +242,7 @@ int do_airspeed_calibration(orb_advert_t *mavlink_log_pub)
 				calibration_log_info(mavlink_log_pub, "[cal] Create air pressure! (got %d, wanted: 50 Pa)", (int)diff_pres.differential_pressure_filtered_pa);
 				tune_neutral(true);
 			}
-			calibration_counter++;
+			calibration_counter++;//计算一共执行了多少次
 
 		} else if (poll_ret == 0) {
 			/* any poll failure for 1s is a reason to abort */

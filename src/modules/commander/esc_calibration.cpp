@@ -35,6 +35,7 @@
  * @file esc_calibration.cpp
  *
  * Definition of esc calibration
+ * 电调校准
  *
  * @author Roman Bapst <roman@px4.io>
  */
@@ -61,19 +62,29 @@
 #include <drivers/drv_hrt.h>
 #include <systemlib/mavlink_log.h>
 
+/**
+ * 电调校准过程
+ * 1.将油门推到最高，
+ * 2.接通电源，启动完成后，断开电源。将油门推到最低
+ * 3.重新连接，启动完成后，将油门推到最高，听到BB,将油门推到最低,听到BBB,(是电调发出的声音)
+ * 4.最后电调会B一声，油门调整完毕。
+ */
+//检查电池是否断开
 int check_if_batt_disconnected(orb_advert_t *mavlink_log_pub) {
 	struct battery_status_s battery;
-	memset(&battery,0,sizeof(battery));
-	int batt_sub = orb_subscribe(ORB_ID(battery_status));
-	orb_copy(ORB_ID(battery_status), batt_sub, &battery);
+	memset(&battery,0,sizeof(battery));//初始化为0
+	int batt_sub = orb_subscribe(ORB_ID(battery_status));//订阅电池状态信息
+	orb_copy(ORB_ID(battery_status), batt_sub, &battery);//将状态信息拷贝到battery变量
 
 	if (battery.voltage_filtered_v > 3.0f && !(hrt_absolute_time() - battery.timestamp > 500000)) {
+		//如果电池电压大于3V，那么就让用户断开电池，并重新连接
 		mavlink_log_info(mavlink_log_pub, "Please disconnect battery and try again!");
 		return PX4_ERROR;
 	}
 	return PX4_OK;
 }
 
+//电调校准过程
 int do_esc_calibration(orb_advert_t *mavlink_log_pub, struct actuator_armed_s* armed)
 {
 	int	return_code = PX4_OK;
@@ -111,13 +122,14 @@ int do_esc_calibration(orb_advert_t *mavlink_log_pub, struct actuator_armed_s* a
 	bool	batt_connected = false;
 
 	hrt_abstime battery_connect_wait_timeout = 30000000;
-	hrt_abstime pwm_high_timeout = 3000000;
-	hrt_abstime timeout_start;
+	hrt_abstime pwm_high_timeout = 3000000;//pwm高电平超时
+	hrt_abstime timeout_start;//超时开始时间
 
 	calibration_log_info(mavlink_log_pub, CAL_QGC_STARTED_MSG, "esc");
 
 	batt_sub = orb_subscribe(ORB_ID(battery_status));
 	if (batt_sub < 0) {
+		//订阅电池信息出错了
 		calibration_log_critical(mavlink_log_pub, CAL_QGC_FAILED_MSG, "Subscribe to battery");
 		goto Error;
 	}
@@ -150,6 +162,7 @@ int do_esc_calibration(orb_advert_t *mavlink_log_pub, struct actuator_armed_s* a
 		goto Error;
 	}
 
+	//告诉IO（是103那个MCU）不要使用安全开关
 	/* tell IO to switch off safety without using the safety switch */
 	if (px4_ioctl(fd, PWM_SERVO_SET_FORCE_SAFETY_OFF, 0) != PX4_OK) {
 		calibration_log_critical(mavlink_log_pub, CAL_QGC_FAILED_MSG, "Unable to force safety off");
@@ -167,6 +180,7 @@ int do_esc_calibration(orb_advert_t *mavlink_log_pub, struct actuator_armed_s* a
 
 		if (hrt_absolute_time() - timeout_start > timeout_wait) {
 			if (!batt_connected) {
+				//等待连接电池超时
 				calibration_log_critical(mavlink_log_pub, CAL_QGC_FAILED_MSG, "Timeout waiting for battery");
 				goto Error;
 			}
@@ -181,13 +195,14 @@ int do_esc_calibration(orb_advert_t *mavlink_log_pub, struct actuator_armed_s* a
 				orb_copy(ORB_ID(battery_status), batt_sub, &battery);
 				if (battery.voltage_filtered_v > 3.0f) {
 					// Battery is connected, signal to user and start waiting again
+					//电池已经连接
 					batt_connected = true;
 					timeout_start = hrt_absolute_time();
 					calibration_log_info(mavlink_log_pub, "[cal] Battery connected");
 				}
 			}
 		}
-		usleep(50000);
+		usleep(50000);//休眠50毫秒
 	}
 
 Out:
@@ -196,7 +211,7 @@ Out:
 	}
 	if (fd != -1) {
 		if (px4_ioctl(fd, PWM_SERVO_SET_FORCE_SAFETY_ON, 0) != PX4_OK) {
-			calibration_log_info(mavlink_log_pub, CAL_QGC_WARNING_MSG, "Safety switch still off");
+			calibration_log_info(mavlink_log_pub, CAL_QGC_WARNING_MSG, "Safety switch still off");//安全开关仍然关闭
 		}
 		if (px4_ioctl(fd, PWM_SERVO_DISARM, 0) != PX4_OK) {
 			calibration_log_info(mavlink_log_pub, CAL_QGC_WARNING_MSG, "Servos still armed");

@@ -831,7 +831,7 @@ MulticopterAttitudeControl::sensor_correction_poll()
 }
 
 /**
- * Attitude controller.
+ * Attitude controller.  外环Pid，为角度控制环
  * Input: 'vehicle_attitude_setpoint' topics (depending on mode)
  * Output: '_rates_sp' vector, '_thrust_sp'
  */
@@ -853,14 +853,16 @@ MulticopterAttitudeControl::control_attitude(float dt)
 	/* all input data is ready, run controller itself */
 
 	/* try to move thrust vector shortest way, because yaw response is slower than roll/pitch */
+	//以最短距离移动推力向量
 	math::Vector<3> R_z(R(0, 2), R(1, 2), R(2, 2));
 	math::Vector<3> R_sp_z(R_sp(0, 2), R_sp(1, 2), R_sp(2, 2));
 
 	/* axis and sin(angle) of desired rotation */
-	math::Vector<3> e_R = R.transposed() * (R_z % R_sp_z);
+	// 旋转向量(轴  角)
+	math::Vector<3> e_R = R.transposed() * (R_z % R_sp_z);// 向量叉乘即误差
 
 	/* calculate angle error */
-	float e_R_z_sin = e_R.length();
+	float e_R_z_sin = e_R.length();// R_z 和 R_sp_z皆为单位向量， |x|=1
 	float e_R_z_cos = R_z * R_sp_z;
 
 	/* calculate weight for yaw control */
@@ -874,7 +876,7 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		float e_R_z_angle = atan2f(e_R_z_sin, e_R_z_cos);
 		math::Vector<3> e_R_z_axis = e_R / e_R_z_sin;
 
-		e_R = e_R_z_axis * e_R_z_angle;
+		e_R = e_R_z_axis * e_R_z_angle;// 旋转向量: 长度为 theta角大小
 
 		/* cross product matrix for e_R_axis */
 		math::Matrix<3, 3> e_R_cp;
@@ -887,6 +889,8 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		e_R_cp(2, 1) = e_R_z_axis(0);
 
 		/* rotation matrix for roll/pitch only rotation */
+		// 罗德里格斯公式
+		 // R = cos(theta) * I + (1 - cos(theta)) * n * n^T + sin(theta) * skewmatrix(n)
 		R_rp = R * (_I + e_R_cp * e_R_z_sin + e_R_cp * e_R_cp * (1.0f - e_R_z_cos));
 
 	} else {
@@ -894,19 +898,25 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		R_rp = R;
 	}
 
+	///////////// 对齐X轴
 	/* R_rp and R_sp has the same Z axis, calculate yaw error */
 	math::Vector<3> R_sp_x(R_sp(0, 0), R_sp(1, 0), R_sp(2, 0));
 	math::Vector<3> R_rp_x(R_rp(0, 0), R_rp(1, 0), R_rp(2, 0));
 	e_R(2) = atan2f((R_rp_x % R_sp_x) * R_sp_z, R_rp_x * R_sp_x) * yaw_w;
 
+	////////////////////////  大角度旋转 ///////////////////////
 	if (e_R_z_cos < 0.0f) {
 		/* for large thrust vector rotations use another rotation method:
 		 * calculate angle and axis for R -> R_sp rotation directly */
+		 // 大的推力向量:直接计算 R->R_sp 的旋转向量(轴、角)
 		math::Quaternion q_error;
+		// 四元数组成为旋转轴 转过的角度
 		q_error.from_dcm(R.transposed() * R_sp);
+		 // 四元数实部为 cos(theta)  虚部为 u_x*sin(theta) u_y*sin  u_z*sin
 		math::Vector<3> e_R_d = q_error(0) >= 0.0f ? q_error.imag()  * 2.0f : -q_error.imag() * 2.0f;
 
 		/* use fusion of Z axis based rotation and direct rotation */
+		 // 使用基于Z轴的旋转和直接旋转的融合
 		float direct_w = e_R_z_cos * e_R_z_cos * yaw_w;
 		e_R = e_R * (1.0f - direct_w) + e_R_d * direct_w;
 	}
@@ -948,6 +958,7 @@ math::Vector<3>
 MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rate)
 {
 	/* throttle pid attenuation factor */
+	// 衰减因子范围在 0 ~ 1 之间
 	float tpa = 1.0f - tpa_rate * (fabsf(_v_rates_sp.thrust) - tpa_breakpoint) / (1.0f - tpa_breakpoint);
 	tpa = fmaxf(TPA_RATE_LOWER_LIMIT, fminf(1.0f, tpa));
 
@@ -960,7 +971,7 @@ MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rat
 }
 
 /*
- * Attitude rates controller.
+ * Attitude rates controller.内环  角速度控制环
  * Input: '_rates_sp' vector, '_thrust_sp'
  * Output: '_att_control' vector
  */
@@ -1019,7 +1030,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	math::Vector<3> rates_d_scaled = _params.rate_d.emult(pid_attenuations(_params.tpa_breakpoint_d, _params.tpa_rate_d));
 
 	/* angular rates error */
-	math::Vector<3> rates_err = _rates_sp - rates;
+	math::Vector<3> rates_err = _rates_sp - rates;  //在得到角速度误差后
 
 	_att_control = rates_p_scaled.emult(rates_err) +
 		       _rates_int +

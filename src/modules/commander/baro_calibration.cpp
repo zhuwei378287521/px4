@@ -34,6 +34,7 @@
 /**
  * @file baro_calibration.cpp
  * Barometer calibration routine
+ * 气压计校准，尚未写这部分代码
  */
 
 #include "baro_calibration.h"
