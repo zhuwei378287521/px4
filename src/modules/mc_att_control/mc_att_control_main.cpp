@@ -154,7 +154,7 @@ private:
 	bool		_actuators_0_circuit_breaker_enabled;	/**< circuit breaker to suppress output */
 
 	struct control_state_s				_ctrl_state;		/**< control state */
-	struct vehicle_attitude_setpoint_s	_v_att_sp;			/**< vehicle attitude setpoint */
+	struct vehicle_attitude_setpoint_s	_v_att_sp;			/**< vehicle attitude setpoint 汽车姿态设定点*/
 	struct vehicle_rates_setpoint_s		_v_rates_sp;		/**< vehicle rates setpoint */
 	struct manual_control_setpoint_s	_manual_control_sp;	/**< manual control setpoint */
 	struct vehicle_control_mode_s		_v_control_mode;	/**< vehicle control mode */
@@ -564,6 +564,7 @@ MulticopterAttitudeControl::~MulticopterAttitudeControl()
 	mc_att_control::g_control = nullptr;
 }
 
+//更新参数
 int
 MulticopterAttitudeControl::parameters_update()
 {
@@ -675,6 +676,7 @@ MulticopterAttitudeControl::parameters_update()
 	return OK;
 }
 
+//获取控制状态参数更新数值
 void
 MulticopterAttitudeControl::parameter_update_poll()
 {
@@ -690,6 +692,7 @@ MulticopterAttitudeControl::parameter_update_poll()
 	}
 }
 
+//获取控制模式数值
 void
 MulticopterAttitudeControl::vehicle_control_mode_poll()
 {
@@ -703,6 +706,7 @@ MulticopterAttitudeControl::vehicle_control_mode_poll()
 	}
 }
 
+//获取手动控制状态
 void
 MulticopterAttitudeControl::vehicle_manual_poll()
 {
@@ -716,6 +720,7 @@ MulticopterAttitudeControl::vehicle_manual_poll()
 	}
 }
 
+//获取系统需要到达的设定点，也就是遥控等信息设置的点
 void
 MulticopterAttitudeControl::vehicle_attitude_setpoint_poll()
 {
@@ -728,6 +733,7 @@ MulticopterAttitudeControl::vehicle_attitude_setpoint_poll()
 	}
 }
 
+//获取设定点速率数值
 void
 MulticopterAttitudeControl::vehicle_rates_setpoint_poll()
 {
@@ -740,6 +746,7 @@ MulticopterAttitudeControl::vehicle_rates_setpoint_poll()
 	}
 }
 
+////获取解锁状态数值
 void
 MulticopterAttitudeControl::arming_status_poll()
 {
@@ -752,6 +759,7 @@ MulticopterAttitudeControl::arming_status_poll()
 	}
 }
 
+////获取汽车状态数值？翻译成汽车很怪
 void
 MulticopterAttitudeControl::vehicle_status_poll()
 {
@@ -776,6 +784,7 @@ MulticopterAttitudeControl::vehicle_status_poll()
 	}
 }
 
+//获取电机限制数值
 void
 MulticopterAttitudeControl::vehicle_motor_limits_poll()
 {
@@ -789,6 +798,7 @@ MulticopterAttitudeControl::vehicle_motor_limits_poll()
 	}
 }
 
+//获取电池状态数值
 void
 MulticopterAttitudeControl::battery_status_poll()
 {
@@ -800,7 +810,7 @@ MulticopterAttitudeControl::battery_status_poll()
 		orb_copy(ORB_ID(battery_status), _battery_status_sub, &_battery_status);
 	}
 }
-
+//获取控制状态数值
 void
 MulticopterAttitudeControl::control_state_poll()
 {
@@ -813,6 +823,7 @@ MulticopterAttitudeControl::control_state_poll()
 	}
 }
 
+//获取传感器当前数值
 void
 MulticopterAttitudeControl::sensor_correction_poll()
 {
@@ -831,56 +842,56 @@ MulticopterAttitudeControl::sensor_correction_poll()
 }
 
 /**
- * Attitude controller.  外环Pid，为角度控制环
+ * Attitude controller.  外环Pid，为    角度     控制环
  * Input: 'vehicle_attitude_setpoint' topics (depending on mode)
  * Output: '_rates_sp' vector, '_thrust_sp'
  */
 void
 MulticopterAttitudeControl::control_attitude(float dt)
 {
-	vehicle_attitude_setpoint_poll();
+	vehicle_attitude_setpoint_poll();//获取姿态设定点，把设置保存到类成员_v_att_sp
 
-	_thrust_sp = _v_att_sp.thrust;
+	_thrust_sp = _v_att_sp.thrust;//获取油门值
 
-	/* construct attitude setpoint rotation matrix */
+	/* construct attitude setpoint rotation matrix */     //创建  设定点  四元数
 	math::Quaternion q_sp(_v_att_sp.q_d[0], _v_att_sp.q_d[1], _v_att_sp.q_d[2], _v_att_sp.q_d[3]);
-	math::Matrix<3, 3> R_sp = q_sp.to_dcm();
+	math::Matrix<3, 3> R_sp = q_sp.to_dcm();//将四元数转换成旋转矩阵
 
-	/* get current rotation matrix from control state quaternions */
+	/* get current rotation matrix from control state quaternions */    //创建  当前姿态  四元数
 	math::Quaternion q_att(_ctrl_state.q[0], _ctrl_state.q[1], _ctrl_state.q[2], _ctrl_state.q[3]);
-	math::Matrix<3, 3> R = q_att.to_dcm();
+	math::Matrix<3, 3> R = q_att.to_dcm();//将四元数转换成旋转矩阵
 
-	/* all input data is ready, run controller itself */
+	/* all input data is ready, run controller itself 所有的数据已经准备，运行控制程序*/
 
 	/* try to move thrust vector shortest way, because yaw response is slower than roll/pitch */
 	//以最短距离移动推力向量
-	math::Vector<3> R_z(R(0, 2), R(1, 2), R(2, 2));
-	math::Vector<3> R_sp_z(R_sp(0, 2), R_sp(1, 2), R_sp(2, 2));
+	math::Vector<3> R_z(R(0, 2), R(1, 2), R(2, 2));//当前姿态Z轴向量
+	math::Vector<3> R_sp_z(R_sp(0, 2), R_sp(1, 2), R_sp(2, 2));//设定点Z轴向量
 
 	/* axis and sin(angle) of desired rotation */
 	// 旋转向量(轴  角)
 	math::Vector<3> e_R = R.transposed() * (R_z % R_sp_z);// 向量叉乘即误差
 
-	/* calculate angle error */
-	float e_R_z_sin = e_R.length();// R_z 和 R_sp_z皆为单位向量， |x|=1
+	/* calculate angle error 计算角度误差*/
+	float e_R_z_sin = e_R.length();// R_z 和 R_sp_z皆为单位向量，所以为1，所以sin等于对边e_R向量的长度 |x|=1
 	float e_R_z_cos = R_z * R_sp_z;
 
-	/* calculate weight for yaw control */
-	float yaw_w = R_sp(2, 2) * R_sp(2, 2);
+	/* calculate weight for yaw control 计算偏航控制的宽度*/
+	float yaw_w = R_sp(2, 2) * R_sp(2, 2);//平方？
 
 	/* calculate rotation matrix after roll/pitch only rotation */
-	math::Matrix<3, 3> R_rp;
+	math::Matrix<3, 3> R_rp;//计算只有roll和pitch旋转后的旋转矩阵
 
 	if (e_R_z_sin > 0.0f) {
-		/* get axis-angle representation */
+		/* get axis-angle representation 得到轴角表示*/
 		float e_R_z_angle = atan2f(e_R_z_sin, e_R_z_cos);
 		math::Vector<3> e_R_z_axis = e_R / e_R_z_sin;
 
 		e_R = e_R_z_axis * e_R_z_angle;// 旋转向量: 长度为 theta角大小
 
-		/* cross product matrix for e_R_axis */
+		/* cross product matrix for e_R_axis 求e_R_axis的矩阵叉积*/
 		math::Matrix<3, 3> e_R_cp;
-		e_R_cp.zero();
+		e_R_cp.zero();//矩阵清零
 		e_R_cp(0, 1) = -e_R_z_axis(2);
 		e_R_cp(0, 2) = e_R_z_axis(1);
 		e_R_cp(1, 0) = e_R_z_axis(2);
@@ -889,7 +900,7 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		e_R_cp(2, 1) = e_R_z_axis(0);
 
 		/* rotation matrix for roll/pitch only rotation */
-		// 罗德里格斯公式
+		// 罗德里格斯公式求旋转后的矩阵
 		 // R = cos(theta) * I + (1 - cos(theta)) * n * n^T + sin(theta) * skewmatrix(n)
 		R_rp = R * (_I + e_R_cp * e_R_z_sin + e_R_cp * e_R_cp * (1.0f - e_R_z_cos));
 
@@ -921,10 +932,10 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		e_R = e_R * (1.0f - direct_w) + e_R_d * direct_w;
 	}
 
-	/* calculate angular rates setpoint */
+	/* calculate angular rates setpoint 计算设定点角速度*/
 	_rates_sp = _params.att_p.emult(e_R);
 
-	/* limit rates */
+	/* limit rates 限制速度*/
 	for (int i = 0; i < 3; i++) {
 		if ((_v_control_mode.flag_control_velocity_enabled || _v_control_mode.flag_control_auto_enabled) &&
 		    !_v_control_mode.flag_control_manual_enabled) {
@@ -935,10 +946,10 @@ MulticopterAttitudeControl::control_attitude(float dt)
 		}
 	}
 
-	/* feed forward yaw setpoint rate */
+	/* feed forward yaw setpoint rate 计算偏航设点的速率*/
 	_rates_sp(2) += _v_att_sp.yaw_sp_move_rate * yaw_w * _params.yaw_ff;
 
-	/* weather-vane mode, dampen yaw rate */
+	/* weather-vane mode, dampen yaw rate 风向标模式，降低偏航率*/
 	if ((_v_control_mode.flag_control_velocity_enabled || _v_control_mode.flag_control_auto_enabled) &&
 	    _v_att_sp.disable_mc_yaw_control == true && !_v_control_mode.flag_control_manual_enabled) {
 		float wv_yaw_rate_max = _params.auto_rate_max(2) * _params.vtol_wv_yaw_rate_scale;
@@ -978,7 +989,7 @@ MulticopterAttitudeControl::pid_attenuations(float tpa_breakpoint, float tpa_rat
 void
 MulticopterAttitudeControl::control_attitude_rates(float dt)
 {
-	/* reset integral if disarmed */
+	/* reset integral if disarmed 如果上锁，则重置所有的整数*/
 	if (!_armed.armed || !_vehicle_status.is_rotary_wing) {
 		_rates_int.zero();
 	}
@@ -996,6 +1007,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	// get the raw gyro data and correct for thermal errors
 	math::Vector<3> rates;
 
+	//陀螺仪可能有多个，根据参数选择
 	if (_selected_gyro == 0) {
 		rates(0) = (_sensor_gyro.x - _sensor_correction.gyro_offset_0[0]) * _sensor_correction.gyro_scale_0[0];
 		rates(1) = (_sensor_gyro.y - _sensor_correction.gyro_offset_0[1]) * _sensor_correction.gyro_scale_0[1];
@@ -1016,6 +1028,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		rates(1) = _sensor_gyro.y;
 		rates(2) = _sensor_gyro.z;
 	}
+	//（数值-偏移）*比例
 
 	// rotate corrected measurements from sensor to body frame
 	rates = _board_rotation * rates;
@@ -1036,13 +1049,16 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 		       _rates_int +
 		       rates_d_scaled.emult(_rates_prev - rates) / dt +
 		       _params.rate_ff.emult(_rates_sp);
+	//进行角速度PID控制(加前馈)
 
 	_rates_sp_prev = _rates_sp;
 	_rates_prev = rates;
 
-	/* update integral only if motors are providing enough thrust to be effective */
+	/* update integral only if motors are providing enough thrust to be effective
+	 * 只有当发动机提供足够的推力才能有效时，更新积分 */
 	if (_thrust_sp > MIN_TAKEOFF_THRUST) {
 		for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
+			//检查是正输出，还是负输出
 			// Check for positive control saturation
 			bool positive_saturation =
 				((i == AXIS_INDEX_ROLL) && _saturation_status.flags.roll_pos) ||
@@ -1055,6 +1071,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 				((i == AXIS_INDEX_PITCH) && _saturation_status.flags.pitch_neg) ||
 				((i == AXIS_INDEX_YAW) && _saturation_status.flags.yaw_neg);
 
+			//最后运算结果之一
 			// prevent further positive control saturation
 			if (positive_saturation) {
 				rates_err(i) = math::min(rates_err(i), 0.0f);
@@ -1064,6 +1081,7 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 			// prevent further negative control saturation
 			if (negative_saturation) {
 				rates_err(i) = math::max(rates_err(i), 0.0f);
+				//最后运算结果之一
 
 			}
 
@@ -1080,22 +1098,24 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	/* explicitly limit the integrator state */
 	for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
 		_rates_int(i) = math::constrain(_rates_int(i), -_params.rate_int_lim(i), _params.rate_int_lim(i));
-
+			//	最后的计算结果_rates_int角速度积分误差
 	}
 }
 
+//主程序运行的主线
 void
 MulticopterAttitudeControl::task_main_trampoline(int argc, char *argv[])
 {
 	mc_att_control::g_control->task_main();
 }
 
+//详细主程序
 void
 MulticopterAttitudeControl::task_main()
 {
 
 	/*
-	 * do subscriptions
+	 * do subscriptions  订阅这些数据状态。
 	 */
 	_v_att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 	_v_rates_sp_sub = orb_subscribe(ORB_ID(vehicle_rates_setpoint));
@@ -1108,7 +1128,7 @@ MulticopterAttitudeControl::task_main()
 	_motor_limits_sub = orb_subscribe(ORB_ID(multirotor_motor_limits));
 	_battery_status_sub = orb_subscribe(ORB_ID(battery_status));
 
-	_gyro_count = math::min(orb_group_count(ORB_ID(sensor_gyro)), MAX_GYRO_COUNT);
+	_gyro_count = math::min(orb_group_count(ORB_ID(sensor_gyro)), MAX_GYRO_COUNT);//陀螺仪数量
 
 	if (_gyro_count == 0) {
 		_gyro_count = 1;
@@ -1121,13 +1141,13 @@ MulticopterAttitudeControl::task_main()
 	_sensor_correction_sub = orb_subscribe(ORB_ID(sensor_correction));
 
 	/* initialize parameters cache */
-	parameters_update();
+	parameters_update();//初始化参数缓存、？
 
 	/* wakeup source: gyro data from sensor selected by the sensor app */
 	px4_pollfd_struct_t poll_fds = {};
 	poll_fds.events = POLLIN;
 
-	while (!_task_should_exit) {
+	while (!_task_should_exit) {//大循环
 
 		poll_fds.fd = _sensor_gyro_sub[_selected_gyro];
 
@@ -1164,9 +1184,9 @@ MulticopterAttitudeControl::task_main()
 			}
 
 			/* copy gyro data */
-			orb_copy(ORB_ID(sensor_gyro), _sensor_gyro_sub[_selected_gyro], &_sensor_gyro);
+			orb_copy(ORB_ID(sensor_gyro), _sensor_gyro_sub[_selected_gyro], &_sensor_gyro);//获取陀螺仪数据
 
-			/* check for updates in other topics */
+			/* check for updates in other topics *///检查并获取这些数据，并复制到相应变量中
 			parameter_update_poll();
 			vehicle_control_mode_poll();
 			arming_status_poll();
@@ -1179,7 +1199,10 @@ MulticopterAttitudeControl::task_main()
 
 			/* Check if we are in rattitude mode and the pilot is above the threshold on pitch
 			 * or roll (yaw can rotate 360 in normal att control).  If both are true don't
-			 * even bother running the attitude controllers */
+			 * even bother running the attitude controllers
+			 *检查我们是否处于rattitude模式，飞行员在球场上的阈值之上
+*或滚动(yaw可以在正常的att控制中旋转360)。如果两者都是真的，那就不要
+甚至还需要运行姿态控制器* */
 			if (_v_control_mode.flag_control_rattitude_enabled) {
 				if (fabsf(_manual_control_sp.y) > _params.rattitude_thres ||
 				    fabsf(_manual_control_sp.x) > _params.rattitude_thres) {
@@ -1195,7 +1218,7 @@ MulticopterAttitudeControl::task_main()
 					control_attitude(dt);
 
 				} else {
-					vehicle_attitude_setpoint_poll();
+					vehicle_attitude_setpoint_poll();//设置设定点
 					_thrust_sp = _v_att_sp.thrust;
 					math::Quaternion q(_ctrl_state.q[0], _ctrl_state.q[1], _ctrl_state.q[2], _ctrl_state.q[3]);
 					math::Quaternion q_sp(&_v_att_sp.q_d[0]);
@@ -1215,6 +1238,7 @@ MulticopterAttitudeControl::task_main()
 				_v_rates_sp.thrust = _thrust_sp;
 				_v_rates_sp.timestamp = hrt_absolute_time();
 
+				//将计算好的结果发布出去
 				if (_v_rates_sp_pub != nullptr) {
 					orb_publish(_rates_sp_id, _v_rates_sp_pub, &_v_rates_sp);
 
@@ -1365,6 +1389,7 @@ MulticopterAttitudeControl::task_main()
 	_control_task = -1;
 }
 
+//开启线程
 int
 MulticopterAttitudeControl::start()
 {
@@ -1386,6 +1411,7 @@ MulticopterAttitudeControl::start()
 	return OK;
 }
 
+//命令的主线程
 int mc_att_control_main(int argc, char *argv[])
 {
 	if (argc < 2) {

@@ -127,7 +127,7 @@ enum MPU6000_BUS {
 
 class MPU6000_gyro;
 
-class MPU6000 : public device::CDev
+class MPU6000 : public device::CDev//继承自CDev所以是字符型设备
 {
 public:
 	MPU6000(device::Device *interface, const char *path_accel, const char *path_gyro, enum Rotation rotation,
