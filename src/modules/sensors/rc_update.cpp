@@ -61,6 +61,7 @@ RCUpdate::RCUpdate(const Parameters &parameters)
 	memset(&_param_rc_values, 0, sizeof(_param_rc_values));
 }
 
+//初始化RC数据更新类
 int RCUpdate::init()
 {
 	_rc_sub = orb_subscribe(ORB_ID(input_rc));
