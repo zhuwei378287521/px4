@@ -1032,8 +1032,8 @@ GPS *GPS::instantiate(int argc, char *argv[])
 
 GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 {
-	const char *device_name = GPS_DEFAULT_UART_PORT;
-	const char *device_name_secondary = nullptr;
+	const char *device_name = GPS_DEFAULT_UART_PORT;//第一套gps，默认是usart3
+	const char *device_name_secondary = nullptr;//第二套GPS的地址（硬件地址）
 	bool fake_gps = false;
 	bool enable_sat_info = false;
 	GPSHelper::Interface interface = GPSHelper::Interface::UART;
@@ -1132,6 +1132,7 @@ GPS *GPS::instantiate(int argc, char *argv[], Instance instance)
 	return gps;
 }
 
+//gps程序的入口地址,PX4支持两套gps
 int
 gps_main(int argc, char *argv[])
 {
