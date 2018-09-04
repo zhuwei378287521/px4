@@ -381,8 +381,8 @@ private:
 	matrix::Dcm<float> _R_att;
 	Vector3f _eul;
 
-	Matrix<float, n_x, n_x>  _A; // dynamics matrix
-	Matrix<float, n_x, n_u>  _B; // input matrix
-	Matrix<float, n_u, n_u>  _R; // input covariance
-	Matrix<float, n_x, n_x>  _Q; // process noise covariance
+	Matrix<float, n_x, n_x>  _A; // dynamics matrix 动态矩阵
+	Matrix<float, n_x, n_u>  _B; // input matrix  输入矩阵
+	Matrix<float, n_u, n_u>  _R; // input covariance  输入协方差
+	Matrix<float, n_x, n_x>  _Q; // process noise covariance 过程白噪声
 };
