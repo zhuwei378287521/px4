@@ -37,7 +37,7 @@
  * @author Ban Siesta <bansiesta@gmail.com>
  *
  * Driver for the PX4FLOW module connected via I2C.
- * ����
+ * ¹âÁ÷
  */
 
 #include <px4_config.h>
@@ -105,9 +105,9 @@
 #include "i2c_frame.h"
 
 struct i2c_frame f;
-struct i2c_integral_frame f_integral;
+struct  f_integral;
 
-class PX4FLOW: public device::I2C
+class PX4FLOW: public device::i2c_integral_frameI2C
 {
 public:
 	PX4FLOW(int bus, int address = I2C_FLOW_ADDRESS_DEFAULT, enum Rotation rotation = (enum Rotation)0,
@@ -121,6 +121,7 @@ public:
 
 	/**
 	 * Diagnostics - print some basic information about the driver.
+	 打印设备基本信息
 	 */
 	void				print_info();
 
@@ -202,7 +203,7 @@ PX4FLOW::PX4FLOW(int bus, int address, enum Rotation rotation, int conversion_in
 	_sample_perf(perf_alloc(PC_ELAPSED, "px4f_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "px4f_com_err")),
 	_conversion_interval(conversion_interval),
-	_sensor_rotation(rotation)
+	_sensor_rotation(rotation)//使用多继承
 {
 	// disable debug() calls
 	_debug_enabled = false;
@@ -302,7 +303,7 @@ PX4FLOW::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case SENSORIOCSPOLLRATE: {
 			switch (arg) {
 
-			/* switching to manual polling */
+			/* switching to manual polling 切换到手动拉取*/
 			case SENSOR_POLLRATE_MANUAL:
 				stop();
 				_measure_ticks = 0;
@@ -434,7 +435,7 @@ PX4FLOW::read(struct file *filp, char *buffer, size_t buflen)
 		return ret ? ret : -EAGAIN;
 	}
 
-	/* manual measurement - run one conversion */
+	/* manual measurement - run one conversion 手动计算，只运行一次转换*/
 	do {
 		_reports->flush();
 
