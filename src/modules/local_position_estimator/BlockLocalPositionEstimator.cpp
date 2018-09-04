@@ -569,6 +569,7 @@ bool BlockLocalPositionEstimator::landed()
 	return _sub_land.get().landed || disarmed_not_falling;
 }
 
+//发布数据之1of3
 void BlockLocalPositionEstimator::publishLocalPos()
 {
 	const Vector<float, n_x> &xLP = _xLowPass.getState();
@@ -640,6 +641,7 @@ void BlockLocalPositionEstimator::publishLocalPos()
 	}
 }
 
+//发布数据之2of3
 void BlockLocalPositionEstimator::publishEstimatorStatus()
 {
 	_pub_est_status.get().timestamp = _timeStamp;
@@ -659,6 +661,7 @@ void BlockLocalPositionEstimator::publishEstimatorStatus()
 	_pub_est_status.update();
 }
 
+//发布数据之3of3
 void BlockLocalPositionEstimator::publishGlobalPos()
 {
 	// publish global position
